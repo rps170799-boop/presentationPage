@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrediView — IFC Viewer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #000000;
+      --surface1: #0a0a0a;
+      --surface2: #111111;
+      --surface3: #1a1a1a;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.12);
+      --blue:     #3b64ff;
+      --blue-dim: rgba(59,100,255,0.15);
+      --text:     #e8e8f0;
+      --muted:    #5a5a70;
+      --muted2:   #2a2a38;
+      --green:    #22c55e;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+    html, body { width:100%; height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); overflow:hidden; }
+
+    /* ── LAYOUT ── */
+    .app { display:grid; grid-template-rows:48px 1fr 28px; width:100vw; height:100vh; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background:var(--surface1); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; padding:0 12px; gap:0; position:relative; z-index:10;
+    }
+    .topbar-logo {
+      display:flex; align-items:center; gap:8px;
+      padding:0 12px 0 4px; border-right:1px solid var(--border); margin-right:12px;
+      height:100%; text-decoration:none; color:var(--text);
+    }
+    .logo-mark {
+      width:22px; height:22px; background:var(--blue); border-radius:5px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:10px; font-weight:700; color:#fff; font-family:var(--mono);
+    }
+    .logo-text { font-family:var(--mono); font-size:12px; letter-spacing:0.04em; }
+
+    .topbar-breadcrumb {
+      display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);
+      padding-right:16px; border-right:1px solid var(--border); margin-right:8px;
+    }
+    .topbar-breadcrumb span { color:var(--text); font-weight:500; }
+    .topbar-breadcrumb i { font-size:9px; }
+
+    .tool-group {
+      display:flex; align-items:center; gap:2px;
+      padding:0 8px; border-right:1px solid var(--border); height:100%;
+    }
+    .tool-btn {
+      width:32px; height:32px; border-radius:6px; border:none;
+      background:transparent; color:var(--muted); font-size:13px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:background .15s, color .15s; position:relative;
+    }
+    .tool-btn:hover { background:var(--surface3); color:var(--text); }
+    .tool-btn.active { background:var(--blue-dim); color:var(--blue); }
+    .tool-btn[data-tip]:hover::before {
+      content:attr(data-tip);
+      position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%);
+      background:var(--surface3); border:1px solid var(--border2);
+      color:var(--text); font-family:var(--mono); font-size:10px;
+      padding:3px 8px; border-radius:4px; white-space:nowrap; z-index:100; pointer-events:none;
+    }
+    .topbar-spacer { flex:1; }
+    .topbar-right {
+      display:flex; align-items:center; gap:8px;
+      padding-left:12px; border-left:1px solid var(--border);
+    }
+    .model-chip {
+      display:flex; align-items:center; gap:6px;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:6px; padding:4px 10px;
+      font-size:11px; font-family:var(--mono); color:var(--text);
+    }
+    .chip-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); }
+    .chip-dot.active { background:var(--green); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .topbar-back {
+      display:flex; align-items:center; gap:6px;
+      font-size:11px; color:var(--muted); background:none; border:none;
+      cursor:pointer; transition:color .15s; font-family:var(--mono);
+    }
+    .topbar-back:hover { color:var(--text); }
+
+    /* ── VIEWER + PANEL ── */
+    .viewer-area { display:flex; position:relative; background:#000; overflow:hidden; }
+    #ifc-container { flex:1; position:relative; background:#000; }
+    #ifc-container canvas { display:block; }
+
+    /* Loading overlay */
+    #loader {
+      position:absolute; inset:0; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:16px; z-index:50;
+    }
+    .loader-icon { color:var(--blue); font-size:28px; animation:spin 1.2s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loader-text { font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.1em; }
+    .loader-bar-wrap {
+      width:200px; height:2px; background:var(--muted2); border-radius:2px; overflow:hidden;
+    }
+    .loader-bar { height:100%; width:0%; background:var(--blue); transition:width .3s ease; border-radius:2px; }
+
+    /* Error overlay */
+    #error-overlay {
+      display:none; position:absolute; inset:0; background:#000;
+      align-items:center; justify-content:center; flex-direction:column;
+      gap:12px; z-index:50; text-align:center; padding:32px;
+    }
+    #error-overlay i { font-size:32px; color:#ef4444; }
+    #error-overlay p { font-size:13px; color:var(--muted); max-width:400px; line-height:1.7; }
+    #error-overlay code { font-family:var(--mono); font-size:11px; color:#ef4444; }
+
+    /* ── PROPERTIES PANEL ── */
+    .props-panel {
+      width:0; background:var(--surface1); border-left:1px solid var(--border);
+      display:flex; flex-direction:column; flex-shrink:0;
+      transition:width .25s ease; overflow:hidden;
+    }
+    .props-panel.open { width:280px; }
+
+    .panel-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .panel-title {
+      font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--muted); display:flex; align-items:center; gap:7px;
+    }
+    .panel-title i { color:var(--blue); font-size:10px; }
+    .panel-close {
+      background:none; border:none; color:var(--muted); font-size:12px;
+      cursor:pointer; transition:color .15s;
+    }
+    .panel-close:hover { color:var(--text); }
+
+    .props-empty {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:10px; color:var(--muted); padding:32px; text-align:center;
+    }
+    .props-empty i { font-size:22px; opacity:.3; }
+    .props-empty p { font-size:12px; line-height:1.6; }
+
+    .props-body { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .props-identity {
+      padding:12px 14px; border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .el-type {
+      font-family:var(--mono); font-size:10px; color:var(--blue);
+      letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px;
+    }
+    .el-name { font-size:13px; font-weight:600; color:var(--text); line-height:1.3; }
+    .el-id { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:3px; }
+
+    .props-group-label {
+      font-family:var(--mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--muted2); padding:10px 14px 4px; flex-shrink:0; border-top:1px solid var(--border);
+    }
+    .props-scroll { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--muted2) transparent; }
+    .prop-row {
+      display:flex; justify-content:space-between; align-items:baseline;
+      gap:8px; padding:5px 14px; border-bottom:1px solid rgba(255,255,255,.03);
+    }
+    .prop-row:hover { background:var(--surface2); }
+    .prop-key { color:var(--muted); font-size:11px; white-space:nowrap; flex-shrink:0; }
+    .prop-val { color:var(--text); font-family:var(--mono); font-size:11px; text-align:right; word-break:break-all; }
+    .prop-val.accent { color:var(--blue); }
+
+    /* ── STATUS BAR ── */
+    .statusbar {
+      background:var(--surface1); border-top:1px solid var(--border);
+      display:flex; align-items:center; padding:0 12px;
+      font-family:var(--mono); font-size:10px; color:var(--muted); gap:0;
+    }
+    .status-item {
+      display:flex; align-items:center; gap:5px;
+      padding:0 10px 0 0; margin-right:10px; border-right:1px solid var(--border);
+    }
+    .status-item:last-child { border-right:none; }
+    .status-item i { font-size:9px; }
+    .statusbar-spacer { flex:1; }
+    .st-green { color:var(--green); }
+    .st-blue  { color:var(--blue); }
+    .st-text  { color:var(--text); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <a class="topbar-logo" href="index.html">
+      <div class="logo-mark">PV</div>
+      <span class="logo-text">PrediView</span>
+    </a>
+    <div class="topbar-breadcrumb">
+      Portfolio <i class="fas fa-chevron-right"></i> <span id="model-name">Loading…</span>
+    </div>
+
+    <div class="tool-group">
+      <button class="tool-btn active" id="btn-select" data-tip="Select / Inspect (S)">
+        <i class="fas fa-arrow-pointer"></i>
+      </button>
+      <button class="tool-btn" id="btn-section" data-tip="Section Plane (X)">
+        <i class="fas fa-knife"></i>
+      </button>
+    </div>
+    <div class="tool-group">
+      <button class="tool-btn" id="btn-fit" data-tip="Fit Model (F)">
+        <i class="fas fa-expand"></i>
+      </button>
+      <button class="tool-btn" id="btn-reset" data-tip="Reset Camera (R)">
+        <i class="fas fa-rotate-left"></i>
+      </button>
+      <button class="tool-btn" id="btn-ortho" data-tip="Perspective / Ortho (P)">
+        <i class="fas fa-cube"></i>
+      </button>
+    </div>
+    <div class="tool-group">
+      <button class="tool-btn" id="btn-delsec" data-tip="Delete All Sections">
+        <i class="fas fa-trash-can"></i>
+      </button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="topbar-right">
+      <div class="model-chip">
+        <span class="chip-dot" id="chip-dot"></span>
+        <span id="chip-label">Connecting…</span>
+      </div>
+      <button class="topbar-back" onclick="window.location.href='index.html'">
+        <i class="fas fa-arrow-left"></i> Portfolio
+      </button>
+    </div>
+  </header>
+
+  <!-- VIEWER AREA -->
+  <div class="viewer-area">
+    <div id="ifc-container">
+
+      <!-- Loader -->
+      <div id="loader">
+        <i class="fas fa-spinner loader-icon"></i>
+        <div class="loader-text" id="loader-text">INITIALIZING ENGINE…</div>
+        <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+      </div>
+
+      <!-- Error / fallback -->
+      <div id="error-overlay">
+        <i class="fas fa-triangle-exclamation"></i>
+        <p id="error-msg">Could not auto-load the model.</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px">Load it manually:</p>
+        <label style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-size:13px;font-family:var(--mono);padding:9px 20px;border-radius:6px;cursor:pointer;">
+          <i class="fas fa-folder-open"></i> Open IFC File
+          <input type="file" id="file-fallback" accept=".ifc" style="display:none">
+        </label>
+        <p style="font-size:11px;color:var(--muted2);margin-top:16px;font-family:var(--mono)">Or place school_str.ifc next to this HTML and re-open.</p>
+      </div>
+
+    </div>
+
+    <!-- PROPERTIES PANEL -->
+    <aside class="props-panel" id="props-panel">
+      <div class="panel-head">
+        <span class="panel-title"><i class="fas fa-circle-info"></i> Properties</span>
+        <button class="panel-close" id="btn-panel-close"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="props-empty" id="props-empty">
+        <i class="fas fa-arrow-pointer"></i>
+        <p>Click on a model element to inspect its IFC properties</p>
+      </div>
+      <div class="props-body" id="props-body" style="display:none">
+        <div class="props-identity">
+          <div class="el-type" id="el-type">—</div>
+          <div class="el-name" id="el-name">—</div>
+          <div class="el-id"   id="el-id">—</div>
+        </div>
+        <div class="props-scroll" id="props-scroll"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- STATUS BAR -->
+  <footer class="statusbar">
+    <div class="status-item">
+      <i class="fas fa-circle" id="st-dot"></i>
+      <span id="st-status">Initializing</span>
+    </div>
+    <div class="status-item">
+      <i class="fas fa-wrench"></i>
+      <span>Tool: <span class="st-blue" id="st-tool">Select</span></span>
+    </div>
+    <div class="status-item" id="st-el-wrap" style="display:none">
+      <i class="fas fa-cube"></i>
+      <span class="st-text" id="st-el">—</span>
+    </div>
+    <div class="statusbar-spacer"></div>
+    <div class="status-item">
+      <i class="fas fa-file"></i>
+      <span id="st-file">school_str.ifc</span>
+    </div>
+    <div class="status-item">
+      <i class="fas fa-rotate"></i>
+      <span>Orbit · Scroll = zoom · Shift+drag = pan · ESC = cancel section</span>
+    </div>
+  </footer>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three":                  "https://esm.sh/three@0.175.0",
+    "web-ifc":                "https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/+esm",
+    "@thatopen/components":   "https://esm.sh/@thatopen/components@3.3.3?external=three,web-ifc",
+    "@thatopen/fragments":    "https://esm.sh/@thatopen/fragments@3.3.6?external=three,web-ifc"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import * as OBC  from '@thatopen/components';
+import * as FRAGS from '@thatopen/fragments';
+
+// ── DOM refs ──
+const container   = document.getElementById('ifc-container');
+const loader      = document.getElementById('loader');
+const loaderText  = document.getElementById('loader-text');
+const loaderBar   = document.getElementById('loader-bar');
+const errOverlay  = document.getElementById('error-overlay');
+const errMsg      = document.getElementById('error-msg');
+const propsPanel  = document.getElementById('props-panel');
+const propsEmpty  = document.getElementById('props-empty');
+const propsBody   = document.getElementById('props-body');
+const propsScroll = document.getElementById('props-scroll');
+const elType      = document.getElementById('el-type');
+const elName      = document.getElementById('el-name');
+const elId        = document.getElementById('el-id');
+const chipDot     = document.getElementById('chip-dot');
+const chipLabel   = document.getElementById('chip-label');
+const stDot       = document.getElementById('st-dot');
+const stStatus    = document.getElementById('st-status');
+const stTool      = document.getElementById('st-tool');
+const stEl        = document.getElementById('st-el');
+const stElWrap    = document.getElementById('st-el-wrap');
+const modelName   = document.getElementById('model-name');
+
+function setLoader(text, pct) {
+  loaderText.textContent = text;
+  if (pct !== undefined) loaderBar.style.width = pct + '%';
+}
+function setStatus(text, color = 'var(--muted)') {
+  stStatus.textContent = text;
+  stDot.style.color = color;
+}
+function showError(msg) {
+  loader.style.display = 'none';
+  errMsg.textContent = msg;
+  errOverlay.style.display = 'flex';
+}
+
+// ── INIT ENGINE ──
+setLoader('INITIALIZING ENGINE…', 5);
+
+const components = new OBC.Components();
+const worlds     = components.get(OBC.Worlds);
+const world      = worlds.create(OBC.SimpleScene, OBC.OrthoPerspectiveCamera, OBC.SimpleRenderer);
+
+world.scene    = new OBC.SimpleScene(components);
+world.scene.setup();
+world.scene.three.background = new THREE.Color('#000000');
+
+// Lighting
+const hemi = new THREE.HemisphereLight(0xffffff, 0x223355, 0.5);
+world.scene.three.add(hemi);
+const sun  = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(60, 100, 40);
+world.scene.three.add(sun);
+const fill = new THREE.DirectionalLight(0xc8d8ff, 0.4);
+fill.position.set(-40, 20, -60);
+world.scene.three.add(fill);
+
+// Remove placeholder before renderer inits
+loader.style.display = 'flex'; // keep on top
+world.renderer = new OBC.SimpleRenderer(components, container);
+world.camera   = new OBC.OrthoPerspectiveCamera(components);
+
+// Initial camera position
+await world.camera.controls.setLookAt(78, 20, -2.2, 26, -4, 25);
+
+components.init();
+
+// ── FRAGMENTS ──
+setLoader('LOADING FRAGMENT ENGINE…', 20);
+let fragments;
+try {
+  const workerResp = await fetch('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
+  const workerBlob = await workerResp.blob();
+  const workerUrl  = URL.createObjectURL(new File([workerBlob], 'worker.mjs', { type: 'text/javascript' }));
+
+  fragments = components.get(OBC.FragmentsManager);
+  fragments.init(workerUrl);
+} catch(e) {
+  showError('Could not load the Fragments engine worker. Check your internet connection.');
+  throw e;
+}
+
+world.camera.controls.addEventListener('update', () => fragments.core.update());
+world.onCameraChanged.add(cam => {
+  for (const [, m] of fragments.list) m.useCamera(cam.three);
+  fragments.core.update(true);
+});
+fragments.list.onItemSet.add(({ value: model }) => {
+  model.useCamera(world.camera.three);
+  world.scene.three.add(model.object);
+  fragments.core.update(true);
+});
+fragments.core.models.materials.list.onItemSet.add(({ value: mat }) => {
+  if (!('isLodMaterial' in mat && mat.isLodMaterial)) {
+    mat.polygonOffset = true;
+    mat.polygonOffsetUnits = 1;
+    mat.polygonOffsetFactor = Math.random();
+  }
+});
+
+// ── IFC LOADER ──
+setLoader('LOADING IFC PARSER…', 40);
+const ifcLoader = components.get(OBC.IfcLoader);
+await ifcLoader.setup({
+  autoSetWasm: false,
+  wasm: { path: 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/', absolute: true }
+});
+
+// ── RAYCASTER + CLIPPER ──
+const casters = components.get(OBC.Raycasters);
+const caster  = casters.get(world);
+const clipper = components.get(OBC.Clipper);
+clipper.enabled = false;
+
+// ── LOAD IFC BUFFER ──
+let loadedModelId = null;
+
+async function loadBuffer(buf, name) {
+  const mb = (buf.byteLength / 1048576).toFixed(1);
+  setLoader('PARSING IFC…', 75);
+  loadedModelId = name + '-' + Date.now();
+  await ifcLoader.load(new Uint8Array(buf), true, loadedModelId, {});
+  setLoader('FINALIZING…', 95);
+  chipDot.classList.add('active');
+  chipLabel.textContent = `${name}.ifc · ${mb} MB`;
+  document.getElementById('st-file').textContent = `${name}.ifc · ${mb} MB`;
+  modelName.textContent = name;
+  const model = fragments.list.get(loadedModelId);
+  if (model) setTimeout(() => world.camera.fit([model.object]), 200);
+  setStatus('Model loaded', 'var(--green)');
+  loader.style.display = 'none';
+}
+
+// Try fetching automatically from multiple paths
+setLoader('FETCHING MODEL…', 60);
+const tryPaths = ['./school_str.ifc', '/school_str.ifc', 'school_str.ifc'];
+let autoLoaded = false;
+for (const p of tryPaths) {
+  try {
+    const resp = await fetch(p);
+    if (!resp.ok) continue;
+    const ab = await resp.arrayBuffer();
+    if (ab.byteLength < 1000) continue; // not a real IFC
+    await loadBuffer(ab, 'school_str');
+    autoLoaded = true;
+    break;
+  } catch(_) { continue; }
+}
+
+if (!autoLoaded) {
+  // Show error with manual upload fallback
+  loader.style.display = 'none';
+  errOverlay.style.display = 'flex';
+  setStatus('Awaiting file…', 'var(--muted)');
+  chipLabel.textContent = 'No model loaded';
+}
+
+// Manual file fallback
+document.getElementById('file-fallback')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file || !file.name.endsWith('.ifc')) return;
+  errOverlay.style.display = 'none';
+  loader.style.display = 'flex';
+  setLoader('READING FILE…', 60);
+  try {
+    const ab   = await file.arrayBuffer();
+    const name = file.name.replace('.ifc','');
+    await loadBuffer(ab, name);
+  } catch(err) {
+    errOverlay.style.display = 'flex';
+    errMsg.textContent = 'Failed to parse: ' + err.message;
+    console.error(err);
+  }
+});
+
+// ── TOOL STATE ──
+let activeTool = 'select'; // 'select' | 'section'
+const btnSelect  = document.getElementById('btn-select');
+const btnSection = document.getElementById('btn-section');
+const btnFit     = document.getElementById('btn-fit');
+const btnReset   = document.getElementById('btn-reset');
+const btnOrtho   = document.getElementById('btn-ortho');
+const btnDelSec  = document.getElementById('btn-delsec');
+
+function setTool(tool) {
+  activeTool = tool;
+  btnSelect.classList.toggle('active', tool === 'select');
+  btnSection.classList.toggle('active', tool === 'section');
+  clipper.enabled = (tool === 'section');
+  container.style.cursor = tool === 'select' ? 'default' : 'crosshair';
+  stTool.textContent = tool === 'select' ? 'Select' : 'Section Plane';
+  if (tool !== 'section') { sectionState = 'idle'; previewPlane.visible = false; }
+}
+
+btnSelect .addEventListener('click', () => setTool('select'));
+btnSection.addEventListener('click', () => setTool(activeTool === 'section' ? 'select' : 'section'));
+btnFit.addEventListener('click', () => {
+  const models = [...fragments.list.values()];
+  if (models.length) world.camera.fit(models.map(m => m.object));
+});
+btnReset.addEventListener('click', () => world.camera.controls.setLookAt(78, 20, -2.2, 26, -4, 25, true));
+btnOrtho.addEventListener('click', () => {
+  const mode = world.camera.projection.current;
+  world.camera.projection.set(mode === 'Perspective' ? 'Orthographic' : 'Perspective');
+  btnOrtho.classList.toggle('active');
+});
+btnDelSec.addEventListener('click', () => { clipper.deleteAll(); });
+document.getElementById('btn-panel-close').addEventListener('click', () => closePanel());
+
+// ── SECTION PREVIEW ──
+let sectionState = 'idle';
+let pendingNormal = null;
+let pendingPoint  = null;
+
+const previewGeom = new THREE.PlaneGeometry(6, 6);
+const previewMat  = new THREE.MeshBasicMaterial({
+  color: 0xf59e0b, transparent: true, opacity: 0.18,
+  side: THREE.DoubleSide, depthTest: false
+});
+const previewPlane = new THREE.Mesh(previewGeom, previewMat);
+previewPlane.visible = false;
+previewPlane.renderOrder = 998;
+world.scene.three.add(previewPlane);
+
+function positionPlane(mesh, point, normal) {
+  mesh.position.copy(point).addScaledVector(normal, 0.01);
+  mesh.lookAt(point.clone().add(normal));
+}
+
+// ── SELECTION ──
+const highlightColor = new THREE.Color('#3b64ff');
+let selectedMap = {};
+
+function openPanel() { propsPanel.classList.add('open'); }
+function closePanel() {
+  propsPanel.classList.remove('open');
+  clearSelection();
+}
+
+function showProperties(attrs) {
+  propsEmpty.style.display = 'none';
+  propsBody.style.display  = 'flex';
+
+  // Flatten nested structures — some versions wrap data in an extra object
+  const flat = attrs?.attributes ?? attrs?.properties ?? attrs ?? {};
+
+  const type = flat?.ObjectType?.value ?? flat?.PredefinedType?.value ?? flat?.type ?? 'IfcElement';
+  const name = flat?.Name?.value ?? flat?.LongName?.value ?? flat?.name ?? '—';
+  const guid = flat?.GlobalId?.value ?? flat?.guid ?? '';
+
+  elType.textContent = type;
+  elName.textContent = name;
+  elId.textContent   = guid ? `GUID: ${guid.slice(0,8)}…` : '';
+
+  const skip = new Set(['GlobalId', 'OwnerHistory', 'guid']);
+  let html = '<div class="props-group-label">Attributes</div>';
+  let count = 0;
+
+  for (const [k, v] of Object.entries(flat)) {
+    if (skip.has(k)) continue;
+    // Handle { value: ... } pattern and plain values
+    const raw = (v && typeof v === 'object' && 'value' in v) ? v.value : v;
+    if (raw === null || raw === undefined || raw === '' || typeof raw === 'object') continue;
+    const accent = (k === 'ObjectType' || k === 'PredefinedType') ? ' accent' : '';
+    html += `<div class="prop-row">
+      <span class="prop-key">${k}</span>
+      <span class="prop-val${accent}">${raw}</span>
+    </div>`;
+    count++;
+  }
+
+  if (count === 0) html += '<div style="padding:12px 14px;font-size:12px;color:var(--muted)">No readable properties found.</div>';
+  propsScroll.innerHTML = html;
+  openPanel();
+}
+
+async function clearSelection() {
+  selectedMap = {};
+  propsEmpty.style.display = 'flex';
+  propsBody.style.display  = 'none';
+  stElWrap.style.display   = 'none';
+  try { await fragments.resetHighlight(); await fragments.core.update(true); } catch(_) {}
+}
+
+// ── CLICK ──
+container.addEventListener('click', async (e) => {
+  // Section tool
+  if (activeTool === 'section') {
+    const hit = await caster.castRay();
+    if (!hit?.point) return;
+    const normal = hit.normal ?? new THREE.Vector3(0,1,0);
+
+    if (sectionState === 'idle') {
+      sectionState = 'previewing';
+      pendingNormal = normal.clone();
+      pendingPoint  = hit.point.clone();
+      positionPlane(previewPlane, hit.point, normal);
+      previewPlane.visible = true;
+    } else {
+      clipper.createFromNormalAndCoplanarPoint(world, pendingNormal.clone().negate(), pendingPoint);
+      sectionState = 'idle';
+      pendingNormal = null;
+      pendingPoint  = null;
+      previewPlane.visible = false;
+    }
+    return;
+  }
+
+  // Select tool
+  const hit = await caster.castRay();
+  if (!hit) { clearSelection(); return; }
+
+  // v3.x may expose fragment as hit.fragments or hit.fragment (singular)
+  const frag    = hit.fragments ?? hit.fragment ?? null;
+  const modelId = frag?.modelId ?? frag?.group?.uuid ?? null;
+  const localId = hit.localId   ?? hit.expressID    ?? null;
+
+  console.log('[PrediView] hit:', hit, '→ modelId:', modelId, 'localId:', localId);
+
+  if (!modelId || localId === null || localId === undefined) {
+    clearSelection(); return;
+  }
+
+  selectedMap = { [modelId]: new Set([localId]) };
+
+  // Highlight — try/catch but log errors
+  try {
+    await fragments.resetHighlight();
+    const renderedFaces = FRAGS.RenderedFaces?.ONE ?? 1;
+    await fragments.highlight(
+      { color: highlightColor, renderedFaces, opacity: 1, transparent: false },
+      selectedMap
+    );
+    await fragments.core.update(true);
+  } catch(e) { console.warn('[PrediView] highlight error:', e); }
+
+  // Properties
+  try {
+    const model = fragments.list.get(modelId);
+    if (!model) { console.warn('[PrediView] model not found:', modelId); return; }
+    const items = await model.getItemsData([localId]);
+    console.log('[PrediView] getItemsData result:', items);
+    const data = Array.isArray(items) ? items[0] : items;
+    if (data) {
+      showProperties(data);
+      const name = data?.Name?.value ?? data?.ObjectType?.value ?? data?.PredefinedType?.value ?? 'Element';
+      stEl.textContent = name;
+      stElWrap.style.display = 'flex';
+    } else {
+      // Show panel open with "no data" message
+      propsEmpty.style.display = 'flex';
+      propsBody.style.display  = 'none';
+      openPanel();
+    }
+  } catch(e) { console.error('[PrediView] getItemsData error:', e); }
+});
+
+// ── KEYBOARD ──
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyS') setTool('select');
+  if (e.code === 'KeyX') setTool(activeTool === 'section' ? 'select' : 'section');
+  if (e.code === 'KeyF') {
+    const models = [...fragments.list.values()];
+    if (models.length) world.camera.fit(models.map(m => m.object));
+  }
+  if (e.code === 'KeyR') world.camera.controls.setLookAt(78, 20, -2.2, 26, -4, 25, true);
+  if (e.code === 'Escape') {
+    if (sectionState === 'previewing') {
+      sectionState = 'idle';
+      previewPlane.visible = false;
+    } else {
+      setTool('select');
+      clearSelection();
+    }
+  }
+  if ((e.code === 'Delete' || e.code === 'Backspace') && activeTool === 'section') {
+    clipper.delete(world);
+  }
+});
+
+// ── RESIZE ──
+window.addEventListener('resize', () => {
+  world.renderer?.resize();
+  world.camera?.updateAspect();
+});
+
+</script>
+</body>
+</html>
