@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add-ins — Revit Scripts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #000000;
+      --surface1: #0a0a0a;
+      --surface2: #111111;
+      --surface3: #1a1a1a;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.14);
+      --blue:     #3b64ff;
+      --blue-dim: rgba(59,100,255,0.12);
+      --text:     #e8e8f0;
+      --muted:    #5a5a70;
+      --muted2:   #2a2a38;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+    html, body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--sans); min-height: 100vh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 24px;
+      height: 48px; gap: 12px;
+    }
+    .topbar-logo {
+      display: flex; align-items: center; gap: 8px;
+      padding-right: 14px; border-right: 1px solid var(--border);
+      text-decoration: none; color: var(--text); height: 100%;
+    }
+    .logo-mark {
+      width: 22px; height: 22px; background: var(--blue); border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #fff; font-family: var(--mono);
+    }
+    .logo-text { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; }
+    .topbar-breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    .topbar-breadcrumb span { color: var(--text); font-weight: 500; }
+    .topbar-breadcrumb i { font-size: 9px; }
+    .topbar-spacer { flex: 1; }
+    .topbar-back {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--muted); background: none; border: none;
+      cursor: pointer; font-family: var(--mono); text-decoration: none;
+      transition: color .15s;
+    }
+    .topbar-back:hover { color: var(--text); }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      max-width: 1100px; margin: 0 auto;
+      padding: 56px 32px 40px;
+    }
+    .page-tag {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--blue); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-tag::before { content:''; width:20px; height:1px; background:var(--blue); }
+    .page-title {
+      font-size: clamp(28px, 4vw, 44px); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 14px;
+    }
+    .page-sub {
+      font-size: 15px; color: var(--muted); max-width: 520px; line-height: 1.7;
+    }
+
+    /* ── MODULES ── */
+    .modules { max-width: 1100px; margin: 0 auto; padding: 0 32px 80px; }
+
+    /* Module = accordion item */
+    .module {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      background: var(--surface1);
+      transition: border-color .2s;
+    }
+    .module.open { border-color: var(--border2); }
+
+    /* Module header — clickable */
+    .module-header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 20px 24px; cursor: pointer;
+      user-select: none;
+      transition: background .15s;
+    }
+    .module-header:hover { background: var(--surface2); }
+
+    .module-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--blue-dim); border: 1px solid rgba(59,100,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--blue); font-size: 14px; flex-shrink: 0;
+    }
+    .module-info { flex: 1; }
+    .module-name {
+      font-size: 16px; font-weight: 600; line-height: 1.2; margin-bottom: 3px;
+    }
+    .module-desc { font-size: 12px; color: var(--muted); }
+
+    .module-meta {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .module-count {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+      color: var(--muted); background: var(--surface3);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 3px 8px;
+    }
+    .module-arrow {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 12px;
+      transition: transform .3s ease, color .2s;
+      background: var(--surface3);
+    }
+    .module.open .module-arrow { transform: rotate(180deg); color: var(--blue); }
+
+    /* Module body */
+    .module-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height .4s ease;
+    }
+    .module.open .module-body { max-height: 2000px; }
+
+    .module-inner {
+      padding: 0 24px 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Scripts grid inside module */
+    .scripts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    /* Script card */
+    .script-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface2);
+      transition: border-color .2s, transform .2s;
+    }
+    .script-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+
+    /* GIF / preview area */
+    .script-preview {
+      width: 100%; aspect-ratio: 16/9;
+      background: var(--surface3);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .script-preview img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .script-preview-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; width: 100%; height: 100%;
+      color: var(--muted2);
+    }
+    .script-preview-placeholder i { font-size: 22px; }
+    .script-preview-placeholder span {
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+
+    /* Script info */
+    .script-info { padding: 14px 16px; }
+    .script-name {
+      font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--text);
+    }
+    .script-desc { font-size: 12px; color: var(--muted); line-height: 1.55; margin-bottom: 10px; }
+    .script-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .script-tag {
+      font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+      color: var(--blue); border: 1px solid rgba(59,100,255,0.25);
+      background: rgba(59,100,255,0.07);
+      border-radius: 3px; padding: 2px 7px;
+    }
+
+    /* ── STATUS BAR ── */
+    .statusbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface1); border-top: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 24px;
+      height: 28px; font-family: var(--mono); font-size: 10px; color: var(--muted);
+    }
+    .statusbar-spacer { flex: 1; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <a class="topbar-logo" href="index.html">
+    <div class="logo-mark">RP</div>
+    <span class="logo-text">PrediTools</span>
+  </a>
+  <div class="topbar-breadcrumb">
+    Portfolio <i class="fas fa-chevron-right"></i> <span>Add-ins & Scripts</span>
+  </div>
+  <div class="topbar-spacer"></div>
+  <a class="topbar-back" href="index.html">
+    <i class="fas fa-arrow-left"></i> Portfolio
+  </a>
+</header>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-tag">Custom Development</div>
+  <h1 class="page-title">Add-ins & Scripts</h1>
+  <p class="page-sub">Revit API tools, automation scripts, and APS integrations — organized by discipline. Click a module to expand.</p>
+</div>
+
+<!-- MODULES -->
+<div class="modules" id="modules-container">
+  <!-- Rendered by JS — edit MODULES array below -->
+</div>
+
+<!-- STATUS BAR -->
+<footer class="statusbar">
+  <span id="st-count">—</span>
+  <div class="statusbar-spacer"></div>
+  <span>Rodrigo Pacheco Serna · BIM Engineer & Developer</span>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// EDIT HERE — add / remove modules and scripts freely
+// ═══════════════════════════════════════════════════════
+const MODULES = [
+  {
+    name: "Electric Infrastructure",
+    desc: "Automation tools for electrical systems modelling and documentation",
+    icon: "fas fa-bolt",
+    scripts: [
+      {
+        name: "Cable Tray Autorouter",
+        desc: "Automatically routes cable trays between electrical rooms following clash-free paths.",
+        tags: ["Revit API", "C#", "Pathfinding"],
+        gif: null // Replace null with "path/to/your.gif"
+      },
+      {
+        name: "Panel Schedule Generator",
+        desc: "Extracts electrical panel data from the model and exports formatted schedules to Excel.",
+        tags: ["Revit API", "C#", "Excel"],
+        gif: null
+      },
+      {
+        name: "Circuit Numbering Tool",
+        desc: "Bulk-renumbers circuits across multiple panels following project naming standards.",
+        tags: ["Revit API", "C#"],
+        gif: null
+      }
+    ]
+  },
+  {
+    name: "APS Integration",
+    desc: "Autodesk Platform Services — cloud workflows and model delivery",
+    icon: "fas fa-cloud",
+    scripts: [
+      {
+        name: "Model Sync Pipeline",
+        desc: "Publishes Revit models to ACC automatically on save, with version tagging and webhook notifications.",
+        tags: ["APS", "C#", "REST API", "Webhooks"],
+        gif: null
+      },
+      {
+        name: "Issue Tracker Bridge",
+        desc: "Syncs BIM 360 issues with project management tools via APS Data Management API.",
+        tags: ["APS", "Python", "REST API"],
+        gif: null
+      },
+      {
+        name: "Custom Viewer Extension",
+        desc: "APS Viewer extension for displaying custom BIM properties and QTO data inline.",
+        tags: ["APS Viewer", "JavaScript", "CSS"],
+        gif: null
+      }
+    ]
+  },
+  {
+    name: "Structural Tools",
+    desc: "Structural modelling automation and QTO extraction utilities",
+    icon: "fas fa-building-columns",
+    scripts: [
+      {
+        name: "Rebar Tag Automation",
+        desc: "Auto-generates rebar tags with correct structural annotations from model parameters.",
+        tags: ["Revit API", "C#", "Structural"],
+        gif: null
+      },
+      {
+        name: "QTO Extractor",
+        desc: "Exports structural quantities (concrete volume, steel weight) to Excel with level breakdown.",
+        tags: ["Revit API", "C#", "Excel", "QTO"],
+        gif: null
+      },
+      {
+        name: "Slab Edge Finder",
+        desc: "Detects and flags missing slab edges and openings that violate structural coordination rules.",
+        tags: ["Revit API", "C#", "Validation"],
+        gif: null
+      }
+    ]
+  }
+];
+// ═══════════════════════════════════════════════════════
+
+function buildModules() {
+  const container = document.getElementById('modules-container');
+  let totalScripts = 0;
+
+  container.innerHTML = MODULES.map((mod, mi) => {
+    totalScripts += mod.scripts.length;
+    const scriptsHTML = mod.scripts.map(s => `
+      <div class="script-card">
+        <div class="script-preview">
+          ${s.gif
+            ? `<img src="${s.gif}" alt="${s.name}" loading="lazy">`
+            : `<div class="script-preview-placeholder">
+                <i class="fas fa-film"></i>
+                <span>GIF placeholder</span>
+               </div>`
+          }
+        </div>
+        <div class="script-info">
+          <div class="script-name">${s.name}</div>
+          <div class="script-desc">${s.desc}</div>
+          <div class="script-tags">${s.tags.map(t => `<span class="script-tag">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="module" id="module-${mi}">
+        <div class="module-header" onclick="toggleModule(${mi})">
+          <div class="module-icon"><i class="${mod.icon}"></i></div>
+          <div class="module-info">
+            <div class="module-name">${mod.name}</div>
+            <div class="module-desc">${mod.desc}</div>
+          </div>
+          <div class="module-meta">
+            <span class="module-count">${mod.scripts.length} scripts</span>
+            <div class="module-arrow"><i class="fas fa-chevron-down"></i></div>
+          </div>
+        </div>
+        <div class="module-body">
+          <div class="module-inner">
+            <div class="scripts-grid">${scriptsHTML}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('st-count').textContent =
+    `${MODULES.length} modules · ${totalScripts} scripts`;
+}
+
+function toggleModule(idx) {
+  const el = document.getElementById('module-' + idx);
+  el.classList.toggle('open');
+}
+
+buildModules();
+</script>
+</body>
+</html>
