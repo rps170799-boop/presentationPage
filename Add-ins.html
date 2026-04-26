@@ -257,21 +257,21 @@ const MODULES = [
     icon: "fas fa-bolt",
     scripts: [
       {
-        name: "Cable Tray Autorouter",
-        desc: "Automatically routes cable trays between electrical rooms following clash-free paths.",
-        tags: ["Revit API", "C#", "Pathfinding"],
-        gif: null // Replace null with "path/to/your.gif"
+        name: "Pole Insertion",
+        desc: "Automated placement of post families by importing X and Y coordinates from Excel, with Z values dynamically adjusted based on topographical data.",
+        tags: ["Revit API", "C#", "Topography", "Excel"],
+        gif: "poleinsertion.gif" // Replace null with "path/to/your.gif"
       },
       {
-        name: "Panel Schedule Generator",
-        desc: "Extracts electrical panel data from the model and exports formatted schedules to Excel.",
-        tags: ["Revit API", "C#", "Excel"],
+        name: "Pole Alignment",
+        desc: "Aligns posts to the road centerline, based on the topography.",
+        tags: ["Revit API", "C#", "Topography"],
         gif: null
       },
       {
-        name: "Circuit Numbering Tool",
-        desc: "Bulk-renumbers circuits across multiple panels following project naming standards.",
-        tags: ["Revit API", "C#"],
+        name: "Pole-Connector Linker",
+        desc: "Links electrical poles with adaptive conductors, matching by proximity and connector elevation.",
+        tags: ["Revit API", "C#","Adaptative Family"],
         gif: null
       }
     ]
