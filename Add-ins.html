@@ -253,26 +253,26 @@
 const MODULES = [
   {
     name: "Electric Infrastructure",
-    desc: "Automation tools for electrical systems modelling and documentation",
+    desc: "Automation tools for a electrical workflow modelling - reduction output time by 80%",
     icon: "fas fa-bolt",
     scripts: [
       {
         name: "Pole Insertion",
         desc: "Automated placement of post families by importing X and Y coordinates from Excel, with Z values dynamically adjusted based on topographical data.",
         tags: ["Revit API", "C#", "Topography", "Excel"],
-        gif: "poleinsertion.gif" // Replace null with "path/to/your.gif"
+        gif: "resources/gif/poleinsertion.gif" // Replace null with "path/to/your.gif"
       },
       {
         name: "Pole Alignment",
         desc: "Aligns posts to the road centerline, based on the topography.",
         tags: ["Revit API", "C#", "Topography"],
-        gif: null
+        gif: "resources/gif/polerotation.gif"
       },
       {
         name: "Pole-Connector Linker",
         desc: "Links electrical poles with adaptive conductors, matching by proximity and connector elevation.",
         tags: ["Revit API", "C#","Adaptative Family"],
-        gif: null
+        gif: "resources/gif/poleconnection.gif"
       }
     ]
   },
