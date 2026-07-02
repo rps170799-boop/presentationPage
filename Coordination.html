@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kill the Gap Between Clash and Fix — Rodrigo Pacheco</title>
+  <template id="__bundler_thumbnail" data-bg-color="#000000">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#000000"/>
+      <rect x="360" y="250" width="200" height="6" rx="3" fill="#3b64ff"/>
+      <rect x="360" y="290" width="480" height="40" rx="5" fill="#e8e8f0"/>
+      <rect x="360" y="345" width="360" height="40" rx="5" fill="none" stroke="#3b64ff" stroke-width="2"/>
+      <text x="780" y="560" font-family="monospace" font-size="200" font-weight="700" fill="#22c55e" text-anchor="middle">0</text>
+      <rect x="360" y="470" width="300" height="14" rx="3" fill="#6b6b80"/>
+      <rect x="360" y="500" width="240" height="14" rx="3" fill="#2a2a38"/>
+    </svg>
+  </template>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #000000;
+      --surface1: #0a0a0a;
+      --surface2: #111111;
+      --surface3: #1a1a1a;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.14);
+      --blue:     #3b64ff;
+      --blue-dim: rgba(59,100,255,0.12);
+      --blue-glow:rgba(59,100,255,0.08);
+      --red:      #ff5c5c;
+      --red-dim:  rgba(255,92,92,0.10);
+      --green:    #22c55e;
+      --green-dim:rgba(34,197,94,0.10);
+      --text:     #e8e8f0;
+      --muted:    #6b6b80;
+      --muted2:   #2a2a38;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--sans); min-height: 100vh; line-height: 1.6;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(59,100,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,100,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none; z-index: 0;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 24px;
+      height: 48px; gap: 12px;
+    }
+    .topbar-logo {
+      display: flex; align-items: center; gap: 8px;
+      padding-right: 14px; border-right: 1px solid var(--border);
+      text-decoration: none; color: var(--text); height: 100%;
+    }
+    .logo-mark {
+      width: 22px; height: 22px; background: var(--blue); border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #fff; font-family: var(--mono);
+    }
+    .logo-text { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; }
+    .topbar-breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    .topbar-breadcrumb span { color: var(--text); font-weight: 500; }
+    .topbar-breadcrumb i { font-size: 9px; }
+    .topbar-spacer { flex: 1; }
+    .topbar-back {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--muted); background: none; border: none;
+      cursor: pointer; font-family: var(--mono); text-decoration: none;
+      transition: color .15s;
+    }
+    .topbar-back:hover { color: var(--text); }
+
+    /* ── ARTICLE WRAPPER ── */
+    .article { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 0 32px 120px; }
+
+    /* ── HEADER ── */
+    .art-header { padding: 72px 0 48px; }
+    .art-tag {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .15em;
+      text-transform: uppercase; color: var(--blue); margin-bottom: 18px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .art-tag::before { content:''; width:24px; height:1px; background:var(--blue); }
+    .art-title {
+      font-size: clamp(34px, 6vw, 60px); font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1.04; margin-bottom: 24px;
+    }
+    .art-title em {
+      font-style: normal; color: transparent;
+      -webkit-text-stroke: 1px rgba(59,100,255,0.7);
+    }
+    .art-lede {
+      font-size: clamp(17px, 2.2vw, 20px); color: var(--muted);
+      line-height: 1.7; max-width: 620px;
+    }
+    .art-lede strong { color: var(--text); font-weight: 500; }
+
+    .art-meta {
+      display: flex; gap: 28px; flex-wrap: wrap;
+      margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border);
+    }
+    .meta-item { display: flex; flex-direction: column; gap: 4px; }
+    .meta-label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .meta-val { font-size: 13px; color: var(--text); font-weight: 500; }
+
+    /* ── SECTIONS ── */
+    .section { margin-top: 64px; }
+    .section-num {
+      font-family: var(--mono); font-size: 12px; color: var(--blue);
+      letter-spacing: .1em; margin-bottom: 14px;
+    }
+    .section h2 {
+      font-size: clamp(24px, 3.4vw, 34px); font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 24px;
+    }
+    .section h3 {
+      font-size: 18px; font-weight: 600; margin: 36px 0 12px;
+    }
+    .section p {
+      font-size: 16px; color: #c4c4d2; line-height: 1.85; margin-bottom: 20px;
+    }
+    .section p strong { color: var(--text); font-weight: 600; }
+    .section p .accent { color: var(--blue); font-weight: 600; }
+
+    /* Pull quote */
+    .pullquote {
+      border-left: 3px solid var(--blue);
+      padding: 6px 0 6px 28px; margin: 40px 0;
+      font-size: clamp(20px, 2.8vw, 26px); font-weight: 500;
+      line-height: 1.4; letter-spacing: -0.01em; color: var(--text);
+    }
+
+    /* ── FRICTION LIST (the problem) ── */
+    .friction-list { display: flex; flex-direction: column; gap: 12px; margin: 28px 0; }
+    .friction-item {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 18px 20px; border: 1px solid var(--border);
+      border-left: 3px solid var(--red); border-radius: 10px;
+      background: var(--surface1);
+    }
+    .friction-item i { color: var(--red); font-size: 16px; margin-top: 3px; flex-shrink: 0; }
+    .friction-item .fi-body { flex: 1; }
+    .friction-item h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .friction-item p { font-size: 14px; color: var(--muted); line-height: 1.6; margin: 0; }
+
+    /* ── SOLUTION CARD ── */
+    .solution-card {
+      border: 1px solid rgba(59,100,255,0.25); border-radius: 16px;
+      background: var(--blue-glow); padding: 36px; margin: 36px 0;
+      position: relative; overflow: hidden;
+    }
+    .solution-card::before {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: var(--blue); opacity: 0.06; filter: blur(50px);
+    }
+    .solution-card .sc-tag {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--blue); margin-bottom: 12px;
+    }
+    .solution-card h3 { font-size: 22px; font-weight: 700; margin: 0 0 14px; }
+    .solution-card p { font-size: 15px; color: #c4c4d2; line-height: 1.8; margin: 0; }
+
+    /* ── STEPS ── */
+    .steps { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 28px 0; }
+    .step { display: flex; gap: 18px; padding: 22px 24px; background: var(--surface1); align-items: flex-start; }
+    .step-num {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      background: var(--blue-dim); border: 1px solid rgba(59,100,255,0.25);
+      color: var(--blue); font-family: var(--mono); font-size: 12px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-body h4 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .step-body p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0; }
+
+    /* ── RESULT / ZERO ── */
+    .result-banner {
+      display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+      border: 1px solid rgba(34,197,94,0.25); border-radius: 16px;
+      background: var(--green-dim); padding: 36px; margin: 40px 0;
+    }
+    .result-big {
+      font-size: clamp(56px, 10vw, 88px); font-weight: 700;
+      color: var(--green); line-height: 1; letter-spacing: -0.04em;
+    }
+    .result-text { flex: 1; min-width: 240px; }
+    .result-text h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .result-text p { font-size: 14px; color: var(--muted); line-height: 1.7; margin: 0; }
+
+    /* metric grid */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 28px 0; }
+    .metric { background: var(--surface1); padding: 24px; }
+    .metric .m-val { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
+    .metric .m-val.green { color: var(--green); }
+    .metric .m-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+
+    /* ── GIF PLACEHOLDER ── */
+    .gif-slot {
+      margin: 32px 0 0;
+      border: 1.5px solid rgba(59,100,255,0.35);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface1);
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      padding: 12px;
+    }
+    .gif-slot img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+    .gif-slot.empty {
+      min-height: 240px; display: flex; align-items: center; justify-content: center;
+    }
+    .gif-slot.empty::after {
+      content: 'GIF'; font-family: var(--mono); font-size: 12px; letter-spacing: .1em;
+      color: rgba(59,100,255,0.3);
+    }
+
+    /* CTA back */
+    .art-footer {
+      margin-top: 80px; padding-top: 36px; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--blue); color: #fff; font-size: 14px; font-weight: 600;
+      padding: 12px 24px; border-radius: 6px; text-decoration: none;
+      transition: opacity .2s, transform .2s;
+    }
+    .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .art-footer .sig { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    @media (max-width: 640px) {
+      .metrics { grid-template-columns: 1fr; }
+      .art-header { padding: 48px 0 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <a class="topbar-logo" href="index.html">
+    <div class="logo-mark">RP</div>
+    <span class="logo-text">PrediCoord</span>
+  </a>
+  <div class="topbar-breadcrumb">
+    Portfolio <i class="fas fa-chevron-right"></i> <span>Clash Resolution</span>
+  </div>
+  <div class="topbar-spacer"></div>
+  <a class="topbar-back" href="index.html">
+    <i class="fas fa-arrow-left"></i> Portfolio
+  </a>
+</header>
+
+<!-- ARTICLE -->
+<article class="article">
+
+  <!-- HEADER -->
+  <header class="art-header">
+    <div class="art-tag">Case Study · Clash Resolution</div>
+    <h1 class="art-title">Closing the gap between<br><em>clash and fix</em>.</h1>
+    <p class="art-lede">
+      Clash detection is fast. Resolving clashes usually isn't. This workflow was developed to
+      <strong>bring clash coordination directly into Revit</strong>, where the fix actually happens —
+      from automating Navisworks setup to resolving paired tickets without ever leaving the model.
+    </p>
+
+  </header>
+
+  <!-- 00 — THE SETUP -->
+  <section class="section">
+    <div class="section-num">00 — The Setup</div>
+    <h2>Bored of making 200 search sets manually?</h2>
+    <p>
+      Before you can even run a clash test, Navisworks needs search and selection sets for every discipline,
+      every category, every condition you want to check. On a large project that's <strong>hundreds of sets</strong>,
+      built by hand, one click at a time. So the workflow starts earlier than Revit — it starts with a script
+      that reads a simple CSV and generates all the search and selection sets inside Navisworks automatically.
+    </p>
+
+    <div class="solution-card">
+      <div class="sc-tag">Navisworks Automation</div>
+      <h3>One CSV in, every search set out.</h3>
+      <p>
+        Define your conditions in a spreadsheet — model name, category, property filters — and the script
+        builds the full set of search and selection sets in Navisworks. What used to take an afternoon
+        of repetitive clicking takes seconds.
+      </p>
+    </div>
+
+    <div class="gif-slot empty" id="Step00Cord">
+       <img src="Step00Cord.gif" alt="Search sets generated from CSV"> 
+    </div>
+  </section>
+
+  <!-- 01 — THE PROBLEM -->
+  <section class="section">
+    <div class="section-num">01 — The Problem</div>
+    <h2>Clashes are detected, but coordination is disconnected.</h2>
+    <p>
+      Navisworks can identify hundreds of clashes in seconds, but the coordination process that follows
+      is often fragmented. Reports are exported, distributed manually, and tracked outside the BIM
+      environment. Modelers need to search through reports, locate affected elements, and recreate the
+      context inside Revit before they can even begin resolving the issue.
+    </p>
+
+    <div class="friction-list">
+      <div class="friction-item">
+        <i class="fas fa-file-export"></i>
+        <div class="fi-body">
+          <h4>Reports exist outside the model</h4>
+          <p>Clash information is usually stored in spreadsheets or HTML exports, forcing users to switch between platforms to understand and resolve issues.</p>
+        </div>
+      </div>
+      <div class="friction-item">
+        <i class="fas fa-question-circle"></i>
+        <div class="fi-body">
+          <h4>Limited traceability</h4>
+          <p>It becomes difficult to track who resolved a clash, when it was addressed, or whether the issue was actually corrected in the model.</p>
+        </div>
+      </div>
+      <div class="friction-item">
+        <i class="fas fa-arrows-left-right"></i>
+        <div class="fi-body">
+          <h4>Disconnected workflows between disciplines</h4>
+          <p>Every clash involves at least two models and multiple stakeholders, but there is often no shared coordination state between them.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="pullquote">
+      The challenge is no longer detecting clashes. The real challenge is delivering actionable information directly to the responsible modeler.
+    </div>
+  </section>
+
+  <!-- 02 — THE SOLUTION -->
+  <section class="section">
+    <div class="section-num">02 — The Solution</div>
+    <h2>Bringing clash coordination into Revit.</h2>
+    <p>
+      The coordination panel imports Navisworks clash reports directly into Revit and converts each clash
+      into <strong>coordinated tickets assigned to the corresponding disciplines</strong>. Instead of relying
+      on spreadsheets or external tracking, modelers can open their Revit file and immediately see the clashes
+      relevant to their model — isolate the issue, review the affected elements, and resolve it directly
+      inside the BIM environment.
+    </p>
+
+    <div class="solution-card">
+      <div class="sc-tag">The Clash Panel</div>
+      <h3>Import, focus, resolve — without leaving Revit.</h3>
+      <p>
+        Import Navisworks HTML clash reports with automatic extraction of element IDs and clash coordinates.
+        Paired tickets are generated for each discipline involved. Direct focus on the clash location,
+        visual highlighting of affected elements, and cloud synchronization through Supabase with
+        multi-project and multi-user support.
+      </p>
+    </div>
+
+    <div class="gif-slot empty" id="Step01Cord">
+       <img src="Step01Cord.gif" alt="Clash panel importing reports"> 
+    </div>
+  </section>
+
+  <!-- 03 — WORKFLOW -->
+  <section class="section">
+    <div class="section-num">03 — Workflow</div>
+    <h2>From clash report to resolution.</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Import clashes</h4>
+          <p>Users can import Navisworks HTML reports or manually select elements from linked models. The system extracts clash data, including element references, coordinates, and model information.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Ticket generation</h4>
+          <p>Each clash creates two linked coordination tickets — one for each discipline involved. Both tickets remain synchronized through the cloud database.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Review and resolve</h4>
+          <p>Create temporary 3D views centered on the clash location with automatic section boxes. Highlight affected elements in the active view. Mark clashes as resolved — and the linked ticket on the other side updates automatically.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Cloud synchronization</h4>
+          <p>All coordination data is stored in Supabase. The add-in calls PostgreSQL RPC functions that filter tickets by project and model name. When a ticket is resolved, a cascading function marks both sides as closed in a single transaction. Access is scoped per project and locked to each user's machine fingerprint.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="gif-slot empty" id="Step02Cord">
+      <img src="Step02Cord.gif" alt="Workflow from import to resolve"> 
+    </div>
+  </section>
+
+  <!-- 04 — RESULTS -->
+  <section class="section">
+    <div class="section-num">04 — Results</div>
+    <h2>Coordination happens where modeling happens.</h2>
+    <p>
+      This workflow removes the dependency on spreadsheets and disconnected reports. Clash information becomes
+      part of the modeling environment, reducing coordination delays and improving visibility across disciplines.
+      Instead of searching through reports, modelers can immediately navigate to the issue, understand the
+      context, and resolve it directly in their workflow.
+    </p>
+
+    <div class="result-banner">
+      <div class="result-big">0</div>
+      <div class="result-text">
+        <h3>External tracking</h3>
+        <p>Clash coordination fully integrated into Revit. No spreadsheets, no disconnected reports, no manual follow-up between disciplines.</p>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="m-val green">Integrated</div>
+        <div class="m-lbl">Clash tracking in Revit</div>
+      </div>
+      <div class="metric">
+        <div class="m-val">2</div>
+        <div class="m-lbl">Tickets per clash</div>
+      </div>
+      <div class="metric">
+        <div class="m-val green">Full</div>
+        <div class="m-lbl">Resolution traceability</div>
+      </div>
+      <div class="metric">
+        <div class="m-val green">Real-time</div>
+        <div class="m-lbl">Cross-discipline sync</div>
+      </div>
+    </div>
+
+    <div class="gif-slot" id="Step03Cord">
+  <img src="Step03Cord.webp" alt="Coordination results">
+</div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="art-footer">
+    <a href="index.html" class="btn-primary"><i class="fas fa-arrow-left"></i> Back to Portfolio</a>
+    <span class="sig">Rodrigo Pacheco Serna · BIM Engineer &amp; Developer</span>
+  </footer>
+
+</article>
+
+</body>
+</html>
