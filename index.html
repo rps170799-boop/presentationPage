@@ -858,7 +858,7 @@ const PROJECTS = [
 function renderProjects() {
   const list = document.getElementById('projects-list');
   list.innerHTML = PROJECTS.map((p, i) => `
-    <a class="project-card" href="${p.link}" target="_blank">
+    <a class="project-card" href="${p.link}">
       <span class="project-index">0${i + 1}</span>
       <div class="project-body">
         <div class="project-title">${p.title}</div>
