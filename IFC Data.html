@@ -3,45 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IFC Data — BIM Dashboard</title>
+  <title>PrediView — BIM Analytics Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:      #000000;
-      --surface1:#0a0a0a;
-      --border:  rgba(255,255,255,0.07);
-      --border2: rgba(255,255,255,0.12);
-      --blue:    #3b64ff;
-      --blue-dim:rgba(59,100,255,0.15);
-      --text:    #e8e8f0;
-      --muted:   #5a5a70;
-      --mono:    'JetBrains Mono', monospace;
-      --sans:    'Space Grotesk', sans-serif;
+      --bg:       #000000;
+      --surface1: #0a0a0a;
+      --surface2: #111111;
+      --surface3: #1a1a1a;
+      --border:   rgba(255,255,255,0.07);
+      --border2:  rgba(255,255,255,0.12);
+      --blue:     #3b64ff;
+      --blue-dim: rgba(59,100,255,0.15);
+      --text:     #e8e8f0;
+      --muted:    #5a5a70;
+      --muted2:   #2a2a38;
+      --green:    #22c55e;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Space Grotesk', sans-serif;
     }
     html, body { width:100%; height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); overflow:hidden; }
+    * { scrollbar-width:thin; scrollbar-color:var(--muted2) transparent; }
+    ::-webkit-scrollbar { width:8px; height:8px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--muted2); border-radius:4px; }
+    ::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+    ::-webkit-scrollbar-corner { background:transparent; }
+    select, option { background-color:var(--surface2); color:var(--text); }
+    select option:checked { background-color:var(--blue-dim); color:var(--blue); }
 
-    #pbi-overlay {
-    position:absolute; inset:0; background:#000;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:16px; z-index:50; transition: opacity 0.6s ease;
-    }
-    .pbi-spinner { color:#3b64ff; font-size:28px; animation:spin 1.2s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    .pbi-text { font-family:'JetBrains Mono',monospace; font-size:12px; color:#5a5a70; letter-spacing:.1em; }
-    .pbi-bar-wrap { width:200px; height:2px; background:#1a1a1a; border-radius:2px; overflow:hidden; }
-    .pbi-bar { height:100%; width:0%; background:#3b64ff; border-radius:2px; transition:width .4s ease; }
-    .app { display:grid; grid-template-rows:48px 1fr 28px; width:100vw; height:100vh; }
+    /* ── LAYOUT ── */
+    .app { display:grid; grid-template-rows:48px 1fr 220px 28px; width:100vw; height:100vh; }
 
     /* ── TOP BAR ── */
     .topbar {
       background:var(--surface1); border-bottom:1px solid var(--border);
-      display:flex; align-items:center; padding:0 16px; gap:12px; z-index:10;
+      display:flex; align-items:center; padding:0 12px; gap:0; position:relative; z-index:10;
     }
     .topbar-logo {
       display:flex; align-items:center; gap:8px;
-      padding-right:14px; border-right:1px solid var(--border);
+      padding:0 12px 0 4px; border-right:1px solid var(--border); margin-right:12px;
       text-decoration:none; color:var(--text); height:100%;
     }
     .logo-mark {
@@ -53,64 +56,163 @@
 
     .topbar-breadcrumb {
       display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);
+      padding-right:16px; border-right:1px solid var(--border); margin-right:8px;
     }
     .topbar-breadcrumb span { color:var(--text); font-weight:500; }
     .topbar-breadcrumb i { font-size:9px; }
 
-    .topbar-spacer { flex:1; }
+    .tool-group {
+      display:flex; align-items:center; gap:2px;
+      padding:0 8px; border-right:1px solid var(--border); height:100%;
+    }
+    .tool-btn {
+      width:32px; height:32px; border-radius:6px; border:none;
+      background:transparent; color:var(--muted); font-size:13px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:background .15s, color .15s; position:relative;
+    }
+    .tool-btn:hover { background:var(--surface3); color:var(--text); }
+    .tool-btn.active { background:var(--blue-dim); color:var(--blue); }
 
-    .chip {
+    .topbar-spacer { flex:1; }
+    .topbar-right {
+      display:flex; align-items:center; gap:8px;
+      padding-left:12px; border-left:1px solid var(--border);
+    }
+    .model-chips { display:flex; gap:6px; }
+    .model-chip {
       display:flex; align-items:center; gap:6px;
-      background:#0a0a0a; border:1px solid var(--border);
-      border-radius:6px; padding:4px 10px;
-      font-size:11px; font-family:var(--mono); color:var(--text);
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:6px; padding:4px 8px;
+      font-size:10px; font-family:var(--mono); color:var(--muted);
     }
-    .chip-dot {
-      width:6px; height:6px; border-radius:50%; background:#22c55e;
-      animation:pulse 2s infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .model-chip.loaded { color:var(--text); }
+    .chip-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); }
+    .model-chip.loaded .chip-dot { background:var(--green); }
 
     .topbar-back {
       display:flex; align-items:center; gap:6px;
       font-size:11px; color:var(--muted); background:none; border:none;
       cursor:pointer; transition:color .15s; font-family:var(--mono);
-      text-decoration:none;
     }
     .topbar-back:hover { color:var(--text); }
 
-    .divider { width:1px; height:24px; background:var(--border); }
+    /* ── MAIN AREA ── */
+    .main-area { display:flex; height:100%; overflow:hidden; }
+    .viewer-panel { flex: 0 0 55%; position:relative; background:#000; border-right:1px solid var(--border); }
+    #ifc-container { width:100%; height:100%; }
+    
+    /* Loader overlay */
+    #loader {
+      position:absolute; inset:0; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:16px; z-index:50;
+    }
+    .loader-icon { color:var(--blue); font-size:28px; animation:spin 1.2s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loader-text { font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.1em; text-align:center; }
+    .loader-bar-wrap { width:200px; height:2px; background:var(--muted2); border-radius:2px; overflow:hidden; }
+    .loader-bar { height:100%; width:0%; background:var(--blue); transition:width .3s ease; border-radius:2px; }
 
-    /* ── DASHBOARD AREA ── */
-    .dashboard-area {
-      position:relative; background:#000; overflow:hidden;
+    #error-overlay {
+      display:none; position:absolute; inset:0; background:#000;
+      align-items:center; justify-content:center; flex-direction:column; gap:12px; z-index:50; text-align:center;
     }
 
-    iframe#pbi-frame {
-      width:100%; height:100%;
-      border:none; display:block;
-      background:#000;
+    /* ── DASHBOARD PANEL ── */
+    .dashboard-panel {
+      flex: 0 0 45%; background:var(--surface1); display:flex; flex-direction:column; overflow:hidden;
+    }
+    .dash-header {
+      padding:12px 16px; border-bottom:1px solid var(--border);
+      display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+    }
+    .dash-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
+    .btn-clear {
+      background:var(--surface2); color:var(--text); border:1px solid var(--border);
+      padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-family:var(--mono);
+    }
+    .btn-clear:hover { background:var(--surface3); }
+
+    .slicers-container {
+      display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .slicer {
+      background:var(--surface2); border:1px solid var(--border); border-radius:4px;
+      padding:4px 8px; font-size:11px; font-family:var(--mono); display:flex; flex-direction:column; gap:4px; flex:1; min-width:120px;
+    }
+    .slicer select {
+      background:transparent; color:var(--text); border:none; outline:none; font-family:var(--mono); font-size:11px;
+      width:100%; padding:2px 0;
     }
 
-    /* Placeholder (shown when no embed URL set) */
-    .placeholder {
-      position:absolute; inset:0;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      gap:16px; background:#000;
+    .qto-container { flex:1; overflow-y:scroll; overflow-x:auto; background:var(--surface1); scrollbar-gutter:stable; }
+    .qto-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:11px; font-family:var(--mono); text-align:right; }
+    .qto-table th:nth-child(1) { width:40%; }
+    .qto-table th:nth-child(2) { width:12%; }
+    .qto-table th:nth-child(3), .qto-table th:nth-child(4), .qto-table th:nth-child(5) { width:16%; }
+    .qto-table th, .qto-table td { padding:6px 10px; border-bottom:1px solid var(--border2); white-space:nowrap; }
+    .qto-table td:first-child { white-space:normal; word-break:break-word; max-width:220px; font-size:10px; }
+    .qto-table th { background:var(--surface2); color:var(--muted); font-weight:500; cursor:pointer; position:sticky; top:0; z-index:2; text-align:right; }
+    .qto-table th:first-child, .qto-table td:first-child { text-align:left; }
+    .qto-table th:hover { color:var(--text); background:var(--surface3); }
+    .qto-table tr:hover td { background:var(--surface2); }
+    .qto-table tr.total-row td { font-weight:700; background:var(--surface2); border-top:2px solid var(--border); position:sticky; bottom:0; }
+    
+    /* ── GANTT STRIP ── */
+    .gantt-panel {
+      background:var(--surface2); border-top:1px solid var(--border); display:flex; flex-direction:row; position:relative; overflow:hidden;
     }
-    .placeholder-icon { font-size:40px; color:var(--blue); opacity:0.3; }
-    .placeholder-title { font-size:18px; font-weight:600; color:var(--text); }
-    .placeholder-sub {
-      font-size:13px; color:var(--muted); text-align:center;
-      max-width:380px; line-height:1.7; font-family:var(--mono);
+    .kpi-zone {
+      flex:0 0 480px; display:flex; gap:1px; background:var(--border);
+      border-right:1px solid var(--border);
     }
-    .placeholder-sub code {
-      display:block; margin-top:10px; padding:10px 16px;
-      background:#0a0a0a; border:1px solid var(--border);
-      border-radius:6px; font-size:11px; color:var(--blue);
-      text-align:left; line-height:1.8;
+    .kpi-card {
+      flex:1; background:var(--surface1); padding:8px 10px;
+      display:flex; flex-direction:column; gap:4px; overflow:hidden;
     }
+    .kpi-title {
+      font-family:var(--mono); font-size:9px; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--muted); white-space:nowrap;
+    }
+    .kpi-donut { flex:1; display:flex; align-items:center; gap:8px; }
+    .kpi-donut svg { flex-shrink:0; }
+    .kpi-legend { display:flex; flex-direction:column; gap:2px; overflow:hidden; }
+    .kpi-leg-row { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9px; color:var(--muted); white-space:nowrap; }
+    .kpi-leg-dot { width:7px; height:7px; border-radius:2px; flex-shrink:0; }
+    .kpi-leg-row b { color:var(--text); font-weight:500; }
+    .gantt-wrap { flex:1; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+    .gantt-header {
+      height:24px; display:flex; border-bottom:1px solid var(--border); background:var(--surface3);
+    }
+    .gantt-month {
+      flex:1; border-right:1px solid var(--border); text-align:center; font-size:10px; font-family:var(--mono); color:var(--muted); line-height:24px; text-transform:uppercase;
+    }
+    .gantt-body { flex:1; position:relative; overflow:hidden; padding:6px 0; }
+    .gantt-row { height:22px; position:relative; margin-bottom:4px; display:flex; align-items:center; }
+    .gantt-label {
+      position:absolute; left:12px; z-index:2; font-size:11px; color:var(--text); font-family:var(--mono);
+      text-shadow: 0 1px 2px #000; pointer-events:none;
+    }
+    .gantt-bar {
+      position:absolute; height:16px; top:4px; border-radius:3px; cursor:pointer;
+      background:var(--blue); opacity:0.8; transition:opacity .2s;
+    }
+    .gantt-bar:hover { opacity:1; }
+    .gantt-bar.alt { background:var(--muted); }
+    
+    .gantt-scrubber {
+      position:absolute; top:0; bottom:0; width:2px; background:#ef4444; z-index:10; left:10%; pointer-events:none;
+    }
+    .gantt-scrubber::before {
+      content:''; position:absolute; top:0; left:-4px; width:10px; height:10px; background:#ef4444; border-radius:50%;
+    }
+    .gantt-controls {
+      position:absolute; bottom:8px; right:16px; z-index:11; display:flex; align-items:center; gap:8px;
+      background:rgba(0,0,0,0.6); padding:4px 8px; border-radius:4px; border:1px solid var(--border);
+    }
+    .gantt-controls input[type="range"] { width:280px; accent-color:var(--blue); }
+    .gantt-date-label { font-size:10px; font-family:var(--mono); color:var(--text); }
 
     /* ── STATUS BAR ── */
     .statusbar {
@@ -129,81 +231,787 @@
 <body>
 <div class="app">
 
-  <!-- TOP BAR -->
   <header class="topbar">
     <a class="topbar-logo" href="index.html">
-      <div class="logo-mark">RP</div>
-      <span class="logo-text">PrediData</span>
+      <div class="logo-mark">PV</div>
+      <span class="logo-text">PrediView</span>
     </a>
-
     <div class="topbar-breadcrumb">
-      Portfolio <i class="fas fa-chevron-right"></i> <span>IFC Data — BIM Dashboard</span>
+      Portfolio <i class="fas fa-chevron-right"></i> <span>Duplex Dashboard</span>
+    </div>
+
+    <div class="tool-group">
+      <button class="tool-btn" id="btn-fit" title="Fit Model (F)"><i class="fas fa-expand"></i></button>
+      <button class="tool-btn" id="btn-reset" title="Reset Camera (R)"><i class="fas fa-rotate-left"></i></button>
+      <button class="tool-btn" id="btn-ortho" title="Perspective / Ortho"><i class="fas fa-cube"></i></button>
+      <button class="tool-btn" id="btn-clear-iso" title="Clear Isolation (Esc)"><i class="fas fa-eye"></i></button>
     </div>
 
     <div class="topbar-spacer"></div>
 
-    <div class="chip">
-      <span class="chip-dot"></span>
-      Power BI · Live Report
+    <div class="topbar-right">
+      <div class="model-chips">
+        <div class="model-chip" id="chip-arch"><span class="chip-dot"></span>Arch</div>
+        <div class="model-chip" id="chip-mep"><span class="chip-dot"></span>MEP</div>
+        <div class="model-chip" id="chip-elec"><span class="chip-dot"></span>Elec</div>
+      </div>
+      <button class="topbar-back" onclick="window.location.href='index.html'">
+        <i class="fas fa-arrow-left"></i> Portfolio
+      </button>
     </div>
-
-    <div class="divider"></div>
-
-    <a class="topbar-back" href="index.html">
-      <i class="fas fa-arrow-left"></i> Portfolio
-    </a>
   </header>
 
-  <!-- DASHBOARD -->
-  <div class="dashboard-area">
+  <div class="main-area">
+    <div class="viewer-panel">
+      <div id="ifc-container"></div>
+      <div id="loader">
+        <i class="fas fa-spinner loader-icon"></i>
+        <div class="loader-text" id="loader-text">INITIALIZING ENGINE…</div>
+        <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+      </div>
+      <div id="error-overlay">
+        <i class="fas fa-triangle-exclamation" style="font-size:32px;color:#ef4444"></i>
+        <p style="font-size:13px;color:var(--muted)">Could not auto-load the federated models.</p>
+        <label style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-size:13px;font-family:var(--mono);padding:9px 20px;border-radius:6px;cursor:pointer;">
+          <i class="fas fa-folder-open"></i> Select IFC Files
+          <input type="file" id="file-fallback" accept=".ifc" multiple style="display:none">
+        </label>
+      </div>
+    </div>
 
-    <iframe
-      id="pbi-frame"
-      src="https://app.powerbi.com/view?r=eyJrIjoiZjY2OWFjZDYtZjMzYy00MjA1LTlhNmEtZWE3MGViMzEyNmZhIiwidCI6IjBlMGNiMDYwLTA5YWQtNDlmNS1hMDA1LTY4YjliNDlhYTFmNiIsImMiOjR9"
-      allowFullScreen="true"
-    ></iframe>
-<div style="position:absolute; bottom:0; left:0; right:0; height:60px; background:#000; z-index:10; pointer-events:none;"></div>
-
-    <div id="pbi-overlay">
-    <i class="fas fa-spinner pbi-spinner"></i>
-    <div class="pbi-text" id="pbi-text">LOADING DASHBOARD…</div>
-    <div class="pbi-bar-wrap"><div class="pbi-bar" id="pbi-bar"></div></div>
+    <div class="dashboard-panel">
+      <div class="dash-header">
+        <span class="dash-title"><i class="fas fa-chart-bar"></i> QTO Analytics</span>
+        <button class="btn-clear" id="btn-clear-filters">Clear Filters</button>
+      </div>
+      <div class="slicers-container">
+        <div class="slicer">
+          <label style="color:var(--muted2);text-transform:uppercase;font-size:9px">Filename</label>
+          <select id="slice-file" multiple size="3" style="height:48px"></select>
+        </div>
+        <div class="slicer">
+          <label style="color:var(--muted2);text-transform:uppercase;font-size:9px">Storey</label>
+          <select id="slice-storey" multiple size="3" style="height:48px"></select>
+        </div>
+        <div class="slicer">
+          <label style="color:var(--muted2);text-transform:uppercase;font-size:9px">Entity</label>
+          <select id="slice-entity" style="height:20px"><option value="">All Entities</option></select>
+        </div>
+        <div class="slicer">
+          <label style="color:var(--muted2);text-transform:uppercase;font-size:9px">Room</label>
+          <select id="slice-room" style="height:20px"><option value="">All Rooms</option></select>
+        </div>
+      </div>
+      <div class="qto-container">
+        <table class="qto-table">
+          <thead>
+            <tr>
+              <th data-sort="name">Element Name <i class="fas fa-sort"></i></th>
+              <th data-sort="qty">Qty <i class="fas fa-sort"></i></th>
+              <th data-sort="area">Area (m²) <i class="fas fa-sort"></i></th>
+              <th data-sort="vol">Volume (m³) <i class="fas fa-sort"></i></th>
+              <th data-sort="len">Length (m) <i class="fas fa-sort"></i></th>
+            </tr>
+          </thead>
+          <tbody id="qto-body">
+            </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- STATUS BAR -->
+  <div class="gantt-panel">
+    <div class="kpi-zone">
+      <div class="kpi-card"><div class="kpi-title">Volume m³ · Structure</div><div id="kpi-vol" class="kpi-donut"></div></div>
+      <div class="kpi-card"><div class="kpi-title">Area m² · Arch Walls</div><div id="kpi-area" class="kpi-donut"></div></div>
+      <div class="kpi-card"><div class="kpi-title">Length m · Pipes</div><div id="kpi-len" class="kpi-donut"></div></div>
+    </div>
+    <div class="gantt-wrap">
+      <div class="gantt-header">
+        <div class="gantt-month" style="flex-grow:31">May 2026</div>
+        <div class="gantt-month" style="flex-grow:30">Jun 2026</div>
+        <div class="gantt-month" style="flex-grow:31">Jul 2026</div>
+        <div class="gantt-month" style="flex-grow:31">Aug 2026</div>
+      </div>
+      <div class="gantt-body" id="gantt-body">
+        <div class="gantt-scrubber" id="gantt-scrubber"></div>
+      </div>
+      <div class="gantt-controls">
+        <input type="range" id="time-slider" min="0" max="120" value="120">
+        <span class="gantt-date-label" id="current-date-lbl">Aug 31, 2026</span>
+      </div>
+    </div>
+  </div>
+
   <footer class="statusbar">
     <div class="status-item">
-      <i class="fas fa-database"></i>
-      <span>BIM Data Pipeline — Flinker + Power BI + IfcOpenShell</span>
+      <i class="fas fa-circle" id="st-dot" style="color:var(--muted)"></i>
+      <span id="st-status">Initializing</span>
+    </div>
+    <div class="status-item">
+      <i class="fas fa-cubes"></i>
+      <span id="st-count">0 elements</span>
+    </div>
+    <div class="status-item" id="st-el-wrap" style="display:none">
+      <i class="fas fa-info-circle"></i>
+      <span style="color:var(--blue)" id="st-el">—</span>
     </div>
     <div class="statusbar-spacer"></div>
     <div class="status-item">
-      <i class="fas fa-arrow-up-right-from-square"></i>
-      <span>Rodrigo Pacheco Serna · BIM Engineer & Developer</span>
+      <i class="fas fa-keyboard"></i>
+      <span>F: Fit · R: Reset · Esc: Clear Isolations</span>
     </div>
   </footer>
 
 </div>
 
-<script>
-  const bar = document.getElementById('pbi-bar');
-  const txt = document.getElementById('pbi-text');
-  const overlay = document.getElementById('pbi-overlay');
-  let pct = 0;
-  const iv = setInterval(() => {
-    pct += (100 - pct) * 0.08;
-    bar.style.width = Math.min(pct, 90) + '%';
-  }, 200);
-  setTimeout(() => {
-    clearInterval(iv);
-    bar.style.width = '100%';
-    txt.textContent = 'READY';
-    setTimeout(() => {
-      overlay.style.opacity = '0';
-      setTimeout(() => overlay.style.display = 'none', 600);
-    }, 400);
-  }, 8000);
+<script type="importmap">
+{
+  "imports": {
+    "three":                  "https://esm.sh/three@0.175.0",
+    "web-ifc":                "https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/+esm",
+    "@thatopen/components":   "https://esm.sh/@thatopen/components@3.3.3?external=three,web-ifc",
+    "@thatopen/fragments":    "https://esm.sh/@thatopen/fragments@3.3.6?external=three,web-ifc"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import * as OBC  from '@thatopen/components';
+import * as FRAGS from '@thatopen/fragments';
+
+// ── DOM REFS ──
+const container   = document.getElementById('ifc-container');
+const loader      = document.getElementById('loader');
+const loaderText  = document.getElementById('loader-text');
+const loaderBar   = document.getElementById('loader-bar');
+const errOverlay  = document.getElementById('error-overlay');
+const stStatus    = document.getElementById('st-status');
+const stDot       = document.getElementById('st-dot');
+const stCount     = document.getElementById('st-count');
+const stEl        = document.getElementById('st-el');
+const stElWrap    = document.getElementById('st-el-wrap');
+
+function setLoader(text, pct) {
+  loaderText.textContent = text;
+  if (pct !== undefined) loaderBar.style.width = pct + '%';
+}
+function setStatus(text, color = 'var(--muted)') {
+  stStatus.textContent = text;
+  stDot.style.color = color;
+}
+
+// ── ENGINE ──
+setLoader('INITIALIZING ENGINE…', 5);
+const components = new OBC.Components();
+const worlds     = components.get(OBC.Worlds);
+const world      = worlds.create(OBC.SimpleScene, OBC.OrthoPerspectiveCamera, OBC.SimpleRenderer);
+
+world.scene    = new OBC.SimpleScene(components);
+world.scene.setup();
+world.scene.three.background = new THREE.Color('#000000');
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x223355, 0.5);
+world.scene.three.add(hemi);
+const sun  = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(60, 100, 40);
+world.scene.three.add(sun);
+
+world.renderer = new OBC.SimpleRenderer(components, container);
+world.camera   = new OBC.OrthoPerspectiveCamera(components);
+await world.camera.controls.setLookAt(50, 50, 50, 0, 0, 0);
+
+components.init();
+
+// Fragments
+setLoader('LOADING FRAGMENT ENGINE…', 15);
+let fragments;
+try {
+  const workerResp = await fetch('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
+  const workerBlob = await workerResp.blob();
+  const workerUrl  = URL.createObjectURL(new File([workerBlob], 'worker.mjs', { type: 'text/javascript' }));
+  fragments = components.get(OBC.FragmentsManager);
+  fragments.init(workerUrl);
+} catch(e) {
+  console.error(e);
+  errOverlay.style.display = 'flex';
+  throw e;
+}
+
+world.camera.controls.addEventListener('update', () => fragments.core.update());
+world.onCameraChanged.add(cam => {
+  for (const [, m] of fragments.list) m.useCamera(cam.three);
+  fragments.core.update(true);
+});
+fragments.list.onItemSet.add(({ value: model }) => {
+  model.useCamera(world.camera.three);
+  world.scene.three.add(model.object);
+  fragments.core.update(true);
+});
+fragments.core.models.materials.list.onItemSet.add(({ value: mat }) => {
+  if (!('isLodMaterial' in mat && mat.isLodMaterial)) {
+    mat.polygonOffset = true;
+    mat.polygonOffsetUnits = 1;
+    mat.polygonOffsetFactor = Math.random();
+  }
+});
+
+// Raycaster & IfcLoader
+const casters = components.get(OBC.Raycasters);
+const caster  = casters.get(world);
+const ifcLoader = components.get(OBC.IfcLoader);
+await ifcLoader.setup({
+  autoSetWasm: false,
+  wasm: { path: 'https://cdn.jsdelivr.net/npm/web-ifc@0.0.77/', absolute: true }
+});
+
+// Ghost Material for unselected
+const ghostMaterial = new THREE.MeshLambertMaterial({
+  color: 0x333344, transparent: true, opacity: 0.15, depthWrite: false
+});
+
+// ── LOAD ──
+const modelsToLoad = [
+  { path: 'Ifc2x3_Duplex_Architecture.ifc', chip: 'chip-arch', name: 'Arch' },
+  { path: 'Ifc2x3_Duplex_MEP.ifc', chip: 'chip-mep', name: 'MEP' },
+  { path: 'Ifc2s3_Duplex_Electrical.ifc', chip: 'chip-elec', name: 'Electrical' }
+];
+
+let allElements = []; 
+
+async function loadBuffer(buf, name, chipId) {
+  const modelId = name + '-' + Date.now();
+  await ifcLoader.load(new Uint8Array(buf), true, modelId, {});
+  document.getElementById(chipId).classList.add('loaded');
+  return modelId;
+}
+
+async function startLoadSequence() {
+  let loadedCount = 0;
+  for (let i = 0; i < modelsToLoad.length; i++) {
+    const m = modelsToLoad[i];
+    setLoader(`FETCHING ${m.name.toUpperCase()}…`, 20 + (i*20));
+    try {
+      const resp = await fetch(m.path);
+      if (resp.ok) {
+        const ab = await resp.arrayBuffer();
+        setLoader(`PARSING ${m.name.toUpperCase()}…`, 30 + (i*20));
+        await loadBuffer(ab, m.name, m.chip);
+        loadedCount++;
+      }
+    } catch(e) { console.warn('Fetch failed', m.path); }
+  }
+  
+  if (loadedCount === 0) {
+    loader.style.display = 'none';
+    errOverlay.style.display = 'flex';
+  } else {
+    fitCamera();
+    await performExtraction();
+  }
+}
+
+document.getElementById('file-fallback').addEventListener('change', async (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
+  errOverlay.style.display = 'none';
+  loader.style.display = 'flex';
+  for (let i=0; i<files.length; i++) {
+    const ab = await files[i].arrayBuffer();
+    setLoader(`PARSING ${files[i].name}…`, 50);
+    await loadBuffer(ab, files[i].name.replace('.ifc',''), i===0?'chip-arch':i===1?'chip-mep':'chip-elec');
+  }
+  fitCamera();
+  await performExtraction();
+});
+
+function fitCamera() {
+  const models = [...fragments.list.values()];
+  if (models.length) world.camera.fit(models.map(m => m.object));
+}
+
+// ── EXTRACT ──
+const SKIP_CATS = new Set([
+  'IFCPROJECT','IFCSITE','IFCBUILDING','IFCBUILDINGSTOREY','IFCOPENINGELEMENT',
+  'IFCANNOTATION','IFCGRID','IFCGRIDAXIS','IFCVIRTUALELEMENT','IFCGROUP','IFCZONE',
+  'IFCSYSTEM','IFCDISTRIBUTIONSYSTEM','IFCELEMENTQUANTITY','IFCMATERIAL',
+  'IFCMATERIALLAYER','IFCMATERIALLAYERSET','IFCMATERIALLAYERSETUSAGE','IFCMATERIALLIST',
+  'IFCPRESENTATIONLAYERASSIGNMENT','IFCRELAGGREGATES'
+]);
+
+async function performExtraction() {
+  setLoader('EXTRACTING PROPERTIES…', 85);
+  allElements = [];
+  let totalProcessed = 0;
+
+  for (const [modelKey, model] of fragments.list) {
+    const fileName = modelKey.split('-')[0]; // Arch | MEP | Electrical
+
+    const PRODUCT_CATS = /^IFC(WALL|WALLSTANDARDCASE|SLAB|ROOF|DOOR|WINDOW|COLUMN|BEAM|MEMBER|PLATE|STAIR|STAIRFLIGHT|RAILING|RAMP|RAMPFLIGHT|COVERING|CURTAINWALL|FOOTING|PILE|BUILDINGELEMENTPROXY|FURNISHINGELEMENT|FLOWTERMINAL|FLOWSEGMENT|FLOWFITTING|FLOWCONTROLLER|FLOWMOVINGDEVICE|FLOWSTORAGEDEVICE|ENERGYCONVERSIONDEVICE|DISTRIBUTIONCONTROLELEMENT|DISTRIBUTIONELEMENT|ELECTRICALELEMENT|SPACE)$/;
+    let catItems = {};
+    try {
+      catItems = await model.getItemsOfCategories([PRODUCT_CATS]);
+    } catch(e) { console.warn('[Extract] categories failed', modelKey, e); continue; }
+
+    for (const [category, localIds] of Object.entries(catItems)) {
+      if (SKIP_CATS.has(category) || /TYPE$/.test(category)) continue;
+      if (!localIds || !localIds.length) continue;
+
+      const BATCH = 100;
+      for (let i = 0; i < localIds.length; i += BATCH) {
+        const chunk = localIds.slice(i, i + BATCH);
+        let items = [];
+        try {
+          items = await model.getItemsData(chunk, {
+            attributesDefault: true,
+            relations: {
+              IsDefinedBy:          { attributes: true, relations: true },
+              ContainedInStructure: { attributes: true, relations: false }
+            }
+          });
+        } catch(e) { console.warn('[Extract] getItemsData failed', category, e); continue; }
+
+        for (let j = 0; j < items.length; j++) {
+          const data = items[j];
+          if (!data) continue;
+
+          const localId = data._localId?.value ?? chunk[j];
+          const name = data.Name?.value ?? data.LongName?.value ?? `${category} ${localId}`;
+          const guid = data._guid?.value ?? data.GlobalId?.value ?? String(localId);
+
+          // Storey from spatial containment — only accept IfcBuildingStorey
+          let storey = '—';
+          const cont = data.ContainedInStructure;
+          if (Array.isArray(cont) && cont.length) {
+            const st = cont.find(c => String(c?._category?.value ?? '').toUpperCase() === 'IFCBUILDINGSTOREY');
+            if (st) storey = st.Name?.value ?? '—';
+            else if (!cont[0]?._category) storey = cont[0]?.Name?.value ?? '—'; // fallback if category not exposed
+          }
+
+          // Quantities from PSet_Revit_Dimensions (Qto_* / any pset as fallback)
+          let area = 0, vol = 0, len = 0;
+          let fbArea = 0, fbVol = 0, fbLen = 0;
+          const psets = Array.isArray(data.IsDefinedBy) ? data.IsDefinedBy : [];
+          for (const pset of psets) {
+            const psetName = pset?.Name?.value ?? '';
+            const props = Array.isArray(pset?.HasProperties) ? pset.HasProperties : [];
+            const isDim = psetName === 'PSet_Revit_Dimensions' || psetName.startsWith('Qto_');
+            for (const p of props) {
+              const pName = p?.Name?.value;
+              const pVal  = p?.NominalValue?.value;
+              if (typeof pVal !== 'number') continue;
+              if (isDim) {
+                if (pName === 'Area' || pName === 'NetSideArea' || pName === 'GrossArea') area = pVal;
+                if (pName === 'Volume' || pName === 'NetVolume' || pName === 'GrossVolume') vol = pVal;
+                if (pName === 'Length') len = pVal;
+              } else {
+                if (pName === 'Area')   fbArea = pVal;
+                if (pName === 'Volume') fbVol  = pVal;
+                if (pName === 'Length') fbLen  = pVal;
+              }
+            }
+          }
+          if (!area && fbArea) area = fbArea;
+          if (!vol  && fbVol)  vol  = fbVol;
+          if (!len  && fbLen)  len  = fbLen;
+
+          const isSpace = category === 'IFCSPACE';
+          const room = isSpace ? (data.LongName?.value ?? name) : '—';
+
+          allElements.push({
+            modelId: modelKey, localId, guid, name,
+            entity: category, storey, room, file: fileName,
+            area, volume: vol, length: len,
+            hasQty: (area > 0 || vol > 0 || len > 0)
+          });
+          totalProcessed++;
+        }
+        setLoader(`EXTRACTING PROPERTIES… ${totalProcessed}`, 90);
+      }
+    }
+  }
+
+  loader.style.display = 'none';
+  setStatus(`Ready · ${totalProcessed} items`, 'var(--green)');
+  initDashboard();
+}
+
+startLoadSequence();
+
+
+// ── STATE ──
+let filteredData = [];
+let activeFilters = { file: [], storey: [], entity: '', room: '' };
+let currentSort = { col: 'name', asc: true };
+
+// ── WIDGETS ──
+function initDashboard() {
+  filteredData = [...allElements];
+  stCount.textContent = `${allElements.length} elements`;
+  
+  const files = [...new Set(allElements.map(e => e.file))].sort();
+  const storeys = [...new Set(allElements.map(e => e.storey))].sort();
+  const entities = [...new Set(allElements.map(e => e.entity))].sort();
+  const rooms = [...new Set(allElements.map(e => e.room))].sort();
+
+  populateSelect('slice-file', files);
+  populateSelect('slice-storey', storeys);
+  populateSelect('slice-entity', entities, true);
+  populateSelect('slice-room', rooms, true);
+
+  document.getElementById('slice-file').addEventListener('change', e => { activeFilters.file = getMulti(e.target); applyFilters(); });
+  document.getElementById('slice-storey').addEventListener('change', e => { activeFilters.storey = getMulti(e.target); applyFilters(); });
+  document.getElementById('slice-entity').addEventListener('change', e => { activeFilters.entity = e.target.value; applyFilters(); });
+  document.getElementById('slice-room').addEventListener('change', e => { activeFilters.room = e.target.value; applyFilters(); });
+
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (currentSort.col === col) { currentSort.asc = !currentSort.asc; } 
+      else { currentSort.col = col; currentSort.asc = true; }
+      renderTable();
+    });
+  });
+
+  document.getElementById('btn-clear-filters').addEventListener('click', clearFilters);
+
+  renderTable();
+  renderKPIs();
+  initGantt();
+}
+
+function populateSelect(id, values, hasAll = false) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = hasAll ? '<option value="">All</option>' : '';
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+function getMulti(sel) { return [...sel.selectedOptions].map(o => o.value); }
+
+function applyFilters() {
+  filteredData = allElements.filter(e => {
+    let match = true;
+    if (activeFilters.file.length && !activeFilters.file.includes(e.file)) match = false;
+    if (activeFilters.storey.length && !activeFilters.storey.includes(e.storey)) match = false;
+    if (activeFilters.entity && activeFilters.entity !== e.entity) match = false;
+    if (activeFilters.room && activeFilters.room !== e.room) match = false;
+    return match;
+  });
+  stCount.textContent = `${filteredData.length} elements`;
+  renderTable();
+  renderKPIs();
+  update3DVisibility();
+}
+
+function clearFilters() {
+  activeFilters = { file: [], storey: [], entity: '', room: '' };
+  ['slice-file','slice-storey','slice-entity','slice-room'].forEach(id => {
+    const sel = document.getElementById(id);
+    [...sel.options].forEach(o => o.selected = false);
+    sel.value = '';
+  });
+  applyFilters();
+}
+
+const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function renderTable() {
+  const tbody = document.getElementById('qto-body');
+  if (filteredData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No elements match</td></tr>';
+    return;
+  }
+
+  // Group by Name — QTO shows only elements carrying quantities
+  const map = {};
+  filteredData.filter(e => e.hasQty && e.entity !== 'IFCSPACE').forEach(e => {
+    if(!map[e.name]) map[e.name] = { name: e.name, qty:0, area:0, vol:0, len:0, ids: [] };
+    map[e.name].qty++;
+    map[e.name].area += e.area;
+    map[e.name].vol += e.volume;
+    map[e.name].len += e.length;
+    map[e.name].ids.push({m: e.modelId, l: e.localId});
+  });
+
+  let rows = Object.values(map);
+  
+  // Sort
+  const c = currentSort.col;
+  const a = currentSort.asc ? 1 : -1;
+  rows.sort((r1, r2) => {
+    if (c === 'name') return r1.name.localeCompare(r2.name) * a;
+    return (r1[c] - r2[c]) * a;
+  });
+
+  let html = '';
+  let tQty=0, tArea=0, tVol=0, tLen=0;
+
+  rows.forEach((r, idx) => {
+    tQty += r.qty; tArea += r.area; tVol += r.vol; tLen += r.len;
+    html += `<tr style="cursor:pointer" data-idx="${idx}">
+      <td>${r.name}</td>
+      <td>${r.qty}</td>
+      <td>${fmt(r.area)}</td>
+      <td>${fmt(r.vol)}</td>
+      <td>${fmt(r.len)}</td>
+    </tr>`;
+  });
+
+  html += `<tr class="total-row">
+    <td>Total</td>
+    <td>${tQty}</td>
+    <td>${fmt(tArea)}</td>
+    <td>${fmt(tVol)}</td>
+    <td>${fmt(tLen)}</td>
+  </tr>`;
+
+  tbody.innerHTML = html;
+
+  // Row clicks -> isolate
+  tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const rowData = rows[tr.dataset.idx];
+      isolateElements(rowData.ids);
+    });
+  });
+}
+
+// ── KPI DONUTS ──
+const STOREY_COLORS = { 'T/FDN':'#a855f7', 'Level 1':'#3b64ff', 'Level 2':'#22c55e', 'Roof':'#f59e0b', '—':'#5a5a70' };
+const KPI_DEFS = [
+  { el:'kpi-vol',  key:'volume', unit:'m³', match: e => /^IFC(COLUMN|BEAM|MEMBER|FOOTING|SLAB|WALL|WALLSTANDARDCASE)$/.test(e.entity) },
+  { el:'kpi-area', key:'area',   unit:'m²', match: e => e.file === 'Arch' && /^IFCWALL/.test(e.entity) },
+  { el:'kpi-len',  key:'length', unit:'m',  match: e => e.entity === 'IFCFLOWSEGMENT' }
+];
+
+function renderKPIs() {
+  for (const def of KPI_DEFS) {
+    const target = document.getElementById(def.el);
+    if (!target) continue;
+    const byStorey = {};
+    let total = 0;
+    for (const e of filteredData) {
+      if (!def.match(e)) continue;
+      const v = e[def.key];
+      if (!v) continue;
+      byStorey[e.storey] = (byStorey[e.storey] || 0) + v;
+      total += v;
+    }
+    if (!total) { target.innerHTML = '<span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">No data</span>'; continue; }
+
+    const R = 24, C = 2 * Math.PI * R;
+    let offset = 0, segs = '', legend = '';
+    const entries = Object.entries(byStorey).sort((a,b) => b[1] - a[1]);
+    for (const [storey, val] of entries) {
+      const frac = val / total;
+      const color = STOREY_COLORS[storey] ?? '#5a5a70';
+      segs += `<circle r="${R}" cx="32" cy="32" fill="none" stroke="${color}" stroke-width="10"
+        stroke-dasharray="${(frac*C).toFixed(2)} ${(C-frac*C).toFixed(2)}"
+        stroke-dashoffset="${(-offset*C).toFixed(2)}" transform="rotate(-90 32 32)"></circle>`;
+      legend += `<div class="kpi-leg-row"><span class="kpi-leg-dot" style="background:${color}"></span>${storey} <b>${fmt(val)}</b></div>`;
+      offset += frac;
+    }
+    target.innerHTML = `<svg width="64" height="64" viewBox="0 0 64 64">${segs}
+      <text x="32" y="36" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="#e8e8f0">${total >= 1000 ? (total/1000).toFixed(1)+'k' : total.toFixed(0)}</text>
+    </svg><div class="kpi-legend">${legend}</div>`;
+  }
+}
+
+const RFACES = FRAGS.RenderedFaces?.ONE ?? 1;
+const GHOST_PARAMS = { color: new THREE.Color('#1a1c26'), opacity: 0.07, transparent: true, renderedFaces: RFACES };
+
+function buildMaps(predicate) {
+  const inMap = {}, outMap = {};
+  for (const e of allElements) {
+    const t = predicate(e) ? inMap : outMap;
+    if (!t[e.modelId]) t[e.modelId] = new Set();
+    t[e.modelId].add(e.localId);
+  }
+  return { inMap, outMap };
+}
+
+async function applyGhosting(inMap, outMap, emphasisParams = null) {
+  try {
+    await fragments.resetHighlight();
+    if (Object.keys(outMap).length) await fragments.highlight(GHOST_PARAMS, outMap);
+    if (emphasisParams && Object.keys(inMap).length) await fragments.highlight(emphasisParams, inMap);
+    await fragments.core.update(true);
+  } catch(err) { console.warn(err); }
+}
+
+async function update3DVisibility() {
+  if (!fragments || !allElements.length) return;
+  if (filteredData.length === allElements.length) {
+    try { await fragments.resetHighlight(); await fragments.core.update(true); } catch(_) {}
+    return;
+  }
+  const inSet = new Set(filteredData.map(e => e.modelId + '/' + e.localId));
+  const { inMap, outMap } = buildMaps(e => inSet.has(e.modelId + '/' + e.localId));
+  await applyGhosting(inMap, outMap, null);
+}
+
+async function isolateElements(idList, fitCam = true) {
+  if (!idList.length) return;
+  const inSet = new Set(idList.map(id => id.m + '/' + id.l));
+  const { inMap, outMap } = buildMaps(e => inSet.has(e.modelId + '/' + e.localId));
+  await applyGhosting(inMap, outMap, { color: new THREE.Color('#22c55e'), opacity: 1, transparent: false, renderedFaces: RFACES });
+  if (!fitCam) return;
+  try {
+    const box = new THREE.Box3();
+    for (const [m, ids] of Object.entries(inMap)) {
+      const model = fragments.list.get(m);
+      if (!model) continue;
+      const boxes = await model.getBoxes([...ids]);
+      for (const b of boxes) if (b) box.union(b);
+    }
+    if (!box.isEmpty()) {
+      await world.camera.controls.fitToBox(box, true,
+        { paddingTop: 1, paddingBottom: 1, paddingLeft: 1, paddingRight: 1 });
+      return;
+    }
+  } catch(e) { console.warn('[Fit] element box fit failed, falling back to model fit', e); }
+  const frags = [...new Set(idList.map(id => id.m))].map(m => fragments.list.get(m)?.object).filter(Boolean);
+  if (frags.length) world.camera.fit(frags);
+}
+
+let downX = 0, downY = 0;
+container.addEventListener('mousedown', e => { downX = e.clientX; downY = e.clientY; });
+container.addEventListener('click', async (e) => {
+  if (Math.hypot(e.clientX - downX, e.clientY - downY) > 4) return; // was a drag/orbit
+  const hit = await caster.castRay();
+  if (!hit) { clearFilters(); return; }
+  
+  const frag = hit.fragments ?? hit.fragment;
+  const modelId = frag?.modelId ?? frag?.group?.uuid;
+  const localId = hit.localId ?? hit.expressID;
+  
+  if (modelId && localId !== undefined) {
+    const el = allElements.find(e => e.modelId === modelId && e.localId === localId);
+    if (el) {
+      stEl.textContent = `${el.name} · ${el.storey}`;
+      stElWrap.style.display = 'flex';
+      // Select just this element: table shows it, 3D isolates it, slicers untouched
+      filteredData = [el];
+      stCount.textContent = '1 element (selected)';
+      renderTable();
+      isolateElements([{ m: el.modelId, l: el.localId }]);
+    }
+  }
+});
+
+document.getElementById('btn-fit').addEventListener('click', fitCamera);
+document.getElementById('btn-reset').addEventListener('click', () => world.camera.controls.setLookAt(50, 50, 50, 0, 0, 0, true));
+document.getElementById('btn-ortho').addEventListener('click', () => {
+  const mode = world.camera.projection.current;
+  world.camera.projection.set(mode === 'Perspective' ? 'Orthographic' : 'Perspective');
+});
+document.getElementById('btn-clear-iso').addEventListener('click', clearFilters);
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyF') fitCamera();
+  if (e.code === 'KeyR') world.camera.controls.setLookAt(50, 50, 50, 0, 0, 0, true);
+  if (e.code === 'Escape') clearFilters();
+});
+
+
+// ── GANTT 4D ──
+const startDate = new Date(2026, 4, 1); // May 1
+const endDate = new Date(2026, 7, 31); // Aug 31
+const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+
+const schedule = [
+  { name: 'Foundation', start: 0, dur: 20, cond: e => e.storey === 'T/FDN' && e.file.includes('Arch') },
+  { name: 'Struct+Arch L1', start: 14, dur: 36, cond: e => e.storey === 'Level 1' && e.file.includes('Arch') },
+  { name: 'Struct+Arch L2', start: 40, dur: 35, cond: e => e.storey === 'Level 2' && e.file.includes('Arch') },
+  { name: 'Roof', start: 65, dur: 25, cond: e => e.storey === 'Roof' && e.file.includes('Arch') },
+  { name: 'MEP rough-in', start: 55, dur: 51, cond: e => e.file.includes('MEP') },
+  { name: 'Electrical', start: 70, dur: 46, cond: e => e.file.includes('Electrical') }
+];
+
+function initGantt() {
+  const gBody = document.getElementById('gantt-body');
+  
+  schedule.forEach((task, i) => {
+    const row = document.createElement('div');
+    row.className = 'gantt-row';
+    
+    const lbl = document.createElement('div');
+    lbl.className = 'gantt-label';
+    lbl.textContent = task.name;
+    
+    const bar = document.createElement('div');
+    bar.className = 'gantt-bar' + (i%2!==0 ? ' alt' : '');
+    const leftPct = (task.start / totalDays) * 100;
+    const widthPct = (task.dur / totalDays) * 100;
+    bar.style.left = leftPct + '%';
+    bar.style.width = widthPct + '%';
+    
+    bar.addEventListener('click', () => isolateTaskElements(task));
+
+    row.appendChild(lbl);
+    row.appendChild(bar);
+    gBody.appendChild(row);
+  });
+
+  const slider = document.getElementById('time-slider');
+  const scrubber = document.getElementById('gantt-scrubber');
+  const lblDate = document.getElementById('current-date-lbl');
+  
+  slider.max = Math.ceil(totalDays / 7) * 7; // full weeks
+  slider.step = 7;
+  slider.value = slider.max;
+
+  slider.addEventListener('input', e => {
+    const val = Math.min(parseInt(e.target.value), totalDays);
+    const pct = (val / totalDays) * 100;
+    scrubber.style.left = pct + '%';
+    
+    const d = new Date(startDate.getTime() + val * 24 * 60 * 60 * 1000);
+    lblDate.textContent = d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+
+    clearTimeout(window.__scrubT);
+    window.__scrubT = setTimeout(() => apply4DScrub(val), 60);
+  });
+}
+
+function isolateTaskElements(task) {
+  const ids = allElements.filter(task.cond).map(e => ({m: e.modelId, l: e.localId}));
+  isolateElements(ids);
+}
+
+async function apply4DScrub(dayOffset) {
+  if (!allElements.length) return;
+  const futureMap = {}, activeMap = {}, doneMap = {};
+  const add = (map, e) => {
+    if (!map[e.modelId]) map[e.modelId] = new Set();
+    map[e.modelId].add(e.localId);
+  };
+  for (const e of allElements) {
+    let task = null;
+    for (const t of schedule) { if (t.cond(e)) { task = t; break; } }
+    if (!task || task.start > dayOffset) add(futureMap, e);          // not built yet / unscheduled
+    else if (task.start + task.dur > dayOffset) add(activeMap, e);   // under construction
+    else add(doneMap, e);                                            // completed
+  }
+  
+  try {
+    await fragments.resetHighlight();
+    if (Object.keys(futureMap).length) await fragments.highlight(GHOST_PARAMS, futureMap);
+    if (Object.keys(activeMap).length) await fragments.highlight(
+      { color: new THREE.Color('#3b64ff'), opacity: 1, transparent: false, renderedFaces: RFACES },
+      activeMap
+    );
+    await fragments.core.update(true);
+  } catch(err) { console.warn('[4D] highlight failed:', err); }
+}
+
+// ── RESIZE ──
+window.addEventListener('resize', () => {
+  world.renderer?.resize();
+  world.camera?.updateAspect();
+});
 </script>
 </body>
 </html>
