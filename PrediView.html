@@ -72,6 +72,7 @@
       color:var(--text); font-family:var(--mono); font-size:10px;
       padding:3px 8px; border-radius:4px; white-space:nowrap; z-index:100; pointer-events:none;
     }
+<<<<<<< HEAD
     .topbar-spacer { flex:1; }
     .topbar-right {
       display:flex; align-items:center; gap:8px;
@@ -85,6 +86,22 @@
     }
     .chip-dot { width:6px; height:6px; border-radius:50%; background:var(--muted); }
     .chip-dot.active { background:var(--green); animation:pulse 2s infinite; }
+=======
+    .vtoolbar-spacer { flex: 1; }
+    .vtoolbar-right { display: flex; align-items: center; gap: 8px; padding-left: 10px; }
+    .model-toggles { display: flex; align-items: center; gap: 4px; }
+    .model-toggle {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 9px; font-size: 10.5px; font-family: var(--mono);
+      color: var(--muted); cursor: pointer; transition: color .15s, border-color .15s;
+    }
+    .model-toggle.visible { color: var(--text); border-color: var(--border2); }
+    .model-toggle .eye { font-size: 11px; color: var(--muted); }
+    .model-toggle.visible .eye { color: var(--blue); }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+    .chip-dot.active { background: var(--green); animation: pulse 2s infinite; }
+>>>>>>> 6a345bc (ahora si)
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
     .topbar-back {
       display:flex; align-items:center; gap:6px;
@@ -271,6 +288,113 @@
       </div>
 
     </div>
+<<<<<<< HEAD
+=======
+  </section>
+
+  <!-- 01 — SWITCHING FAMILIES -->
+  <section class="section">
+    <div class="section-num">01 — Model Switching</div>
+    <h2>One viewer, every discipline into model.</h2>
+    <p>
+      Browse through fabrication-level MEP families modeled across multiple systems and use cases. Each family authored for coordination, documentation and downstream construction workflows.
+    </p>
+  </section>
+
+  <!-- 02 — EXPLORE -->
+  <section class="section">
+    <div class="section-num">02 — Inspect the Model</div>
+    <h2>LOD 400 MEP fabrication model.</h2>
+    <p>Inspect geometry attributes directly from the browser. </p>
+
+    <div class="viewer-frame">
+      <div class="viewer-shell">
+
+        <!-- VIEWER TOOLBAR -->
+        <div class="vtoolbar">
+          <div class="tool-group">
+            <button class="tool-btn active" id="btn-select" data-tip="Select / Inspect (S)"><i class="fas fa-arrow-pointer"></i></button>
+            <button class="tool-btn" id="btn-section" data-tip="Section Plane (X)"><i class="fas fa-knife"></i></button>
+          </div>
+          <div class="tool-group">
+            <button class="tool-btn" id="btn-fit" data-tip="Fit Model (F)"><i class="fas fa-expand"></i></button>
+            <button class="tool-btn" id="btn-reset" data-tip="Reset Camera (R)"><i class="fas fa-rotate-left"></i></button>
+            <button class="tool-btn" id="btn-ortho" data-tip="Perspective / Ortho (P)"><i class="fas fa-cube"></i></button>
+          </div>
+          <div class="tool-group">
+            <button class="tool-btn" id="btn-delsec" data-tip="Delete All Sections"><i class="fas fa-trash-can"></i></button>
+          </div>
+          <div class="vtoolbar-spacer"></div>
+          <div class="vtoolbar-right">
+            <div class="model-toggles" id="model-toggles"></div>
+          </div>
+        </div>
+
+        <!-- VIEWER + PANEL -->
+        <div class="viewer-area">
+          <div id="ifc-container">
+            <div id="loader">
+              <i class="fas fa-spinner loader-icon"></i>
+              <div class="loader-text" id="loader-text">INITIALIZING ENGINE…</div>
+              <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+            </div>
+            <div id="error-overlay">
+              <i class="fas fa-triangle-exclamation"></i>
+              <p id="error-msg">Could not auto-load the model.</p>
+              <p style="font-size:11.5px;color:var(--muted);margin-top:8px">Load it manually:</p>
+              <label style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-size:12.5px;font-family:var(--mono);padding:9px 20px;border-radius:6px;cursor:pointer;">
+                <i class="fas fa-folder-open"></i> Open IFC File
+                <input type="file" id="file-fallback" accept=".ifc" style="display:none">
+              </label>
+              <p style="font-size:10.5px;color:var(--muted2);margin-top:16px;font-family:var(--mono)">Or place the .ifc files next to this HTML and re-open.</p>
+            </div>
+          </div>
+
+          <aside class="props-panel" id="props-panel">
+            <div class="panel-head">
+              <span class="panel-title"><i class="fas fa-circle-info"></i> Properties</span>
+              <button class="panel-close" id="btn-panel-close" title="Clear selection"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="props-empty" id="props-empty">
+              <i class="fas fa-arrow-pointer"></i>
+              <p>Click on a model element to inspect its IFC properties</p>
+            </div>
+            <div class="props-body" id="props-body" style="display:none">
+              <div class="props-identity">
+                <div class="el-type" id="el-type">—</div>
+                <div class="el-name" id="el-name">—</div>
+                <div class="el-id"   id="el-id">—</div>
+              </div>
+              <div class="props-scroll" id="props-scroll"></div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- STATUS BAR -->
+        <footer class="statusbar">
+          <div class="status-item">
+            <i class="fas fa-circle" id="st-dot"></i>
+            <span id="st-status">Initializing</span>
+          </div>
+          <div class="status-item">
+            <i class="fas fa-wrench"></i>
+            <span>Tool: <span class="st-blue" id="st-tool">Select</span></span>
+          </div>
+          <div class="status-item" id="st-el-wrap" style="display:none">
+            <i class="fas fa-cube"></i>
+            <span class="st-text" id="st-el">—</span>
+          </div>
+          <div class="statusbar-spacer"></div>
+          <div class="status-item">
+            <i class="fas fa-file"></i>
+            <span id="st-file">Federated model</span>
+          </div>
+          <div class="status-item">
+            <i class="fas fa-rotate"></i>
+            <span>Orbit · Scroll = zoom · Shift+drag = pan · ESC = cancel section</span>
+          </div>
+        </footer>
+>>>>>>> 6a345bc (ahora si)
 
     <!-- PROPERTIES PANEL -->
     <aside class="props-panel" id="props-panel">
@@ -336,6 +460,9 @@ import * as THREE from 'three';
 import * as OBC  from '@thatopen/components';
 import * as FRAGS from '@thatopen/fragments';
 
+// ── DEBUG HOOK (for generating .frag cache files from devtools) ──
+window.__prediviewDebug = { fragments: null, modelState: null };
+
 // ── DOM refs ──
 const container   = document.getElementById('ifc-container');
 const loader      = document.getElementById('loader');
@@ -350,8 +477,12 @@ const propsScroll = document.getElementById('props-scroll');
 const elType      = document.getElementById('el-type');
 const elName      = document.getElementById('el-name');
 const elId        = document.getElementById('el-id');
+<<<<<<< HEAD
 const chipDot     = document.getElementById('chip-dot');
 const chipLabel   = document.getElementById('chip-label');
+=======
+const modelToggles = document.getElementById('model-toggles');
+>>>>>>> 6a345bc (ahora si)
 const stDot       = document.getElementById('st-dot');
 const stStatus    = document.getElementById('st-status');
 const stTool      = document.getElementById('st-tool');
@@ -419,6 +550,8 @@ try {
   throw e;
 }
 
+window.__prediviewDebug.fragments = fragments;
+
 world.camera.controls.addEventListener('update', () => fragments.core.update());
 world.onCameraChanged.add(cam => {
   for (const [, m] of fragments.list) m.useCamera(cam.three);
@@ -451,9 +584,103 @@ const caster  = casters.get(world);
 const clipper = components.get(OBC.Clipper);
 clipper.enabled = false;
 
+
+// ── FEDERATED MODELS ──
+// All three coexist in the scene; each entry gets an eye toggle to show/hide it.
+const MODEL_FILES = ['CWP Room_IM_Optimized', 'CWP Room_San01_Optimized', 'CWP Room_San02_Optimized'];
+const modelState = {}; // name -> { modelId, visible }
+window.__prediviewDebug.modelState = modelState;
+
+MODEL_FILES.forEach(name => {
+  const btn = document.createElement('div');
+  btn.className = 'model-toggle visible';
+  btn.dataset.name = name;
+  btn.innerHTML = `<i class="fas fa-eye eye"></i><span>${name}</span>`;
+  btn.addEventListener('click', () => toggleModelVisibility(name));
+  modelToggles.appendChild(btn);
+});
+
+function toggleModelVisibility(name) {
+  const state = modelState[name];
+  if (!state) return;
+  state.visible = !state.visible;
+  const model = fragments.list.get(state.modelId);
+  if (model) model.object.visible = state.visible;
+  const btn = modelToggles.querySelector(`[data-name="${CSS.escape(name)}"]`);
+  if (btn) {
+    btn.classList.toggle('visible', state.visible);
+    btn.querySelector('.eye').className = state.visible ? 'fas fa-eye eye' : 'fas fa-eye-slash eye';
+  }
+  fragments.core.update(true);
+}
+
+// ── FRAGMENTS CACHE (IndexedDB) ──
+// Converting IFC -> fragments is the expensive step. Once a model has been
+// parsed, we store its fragments binary in IndexedDB so future visits skip
+// IFC parsing entirely and just re-hydrate the fragments buffer.
+const CACHE_DB = 'prediview-fragments-cache-v3';
+const CACHE_STORE = 'models';
+const CACHE_VERSION = 1;
+
+function openCacheDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(CACHE_DB, CACHE_VERSION);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(CACHE_STORE)) {
+        req.result.createObjectStore(CACHE_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getCachedFragments(name) {
+  try {
+    const db = await openCacheDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(CACHE_STORE, 'readonly');
+      const req = tx.objectStore(CACHE_STORE).get(name);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e) { console.warn('[PrediView] cache read failed:', e); return null; }
+}
+
+async function setCachedFragments(name, buffer) {
+  try {
+    const db = await openCacheDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).put(buffer, name);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) { console.warn('[PrediView] cache write failed:', e); }
+}
+
+async function deleteCachedFragments(name) {
+  try {
+    const db = await openCacheDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(CACHE_STORE, 'readwrite');
+      tx.objectStore(CACHE_STORE).delete(name);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(_) {}
+}
+
 // ── LOAD IFC BUFFER ──
 let loadedModelId = null;
 
+function finalizeLoad(name, mb, fromCache) {
+  modelState[name] = { modelId: loadedModelId, visible: true };
+  setStatus(fromCache ? 'Models loaded (cached)' : 'Models loaded', 'var(--green)');
+}
+
+// Parses raw IFC bytes, then caches the converted fragments buffer for next time.
+>>>>>>> 6a345bc (ahora si)
 async function loadBuffer(buf, name) {
   const mb = (buf.byteLength / 1048576).toFixed(1);
   setLoader('PARSING IFC…', 75);
@@ -470,6 +697,7 @@ async function loadBuffer(buf, name) {
   loader.style.display = 'none';
 }
 
+<<<<<<< HEAD
 // Try fetching automatically from multiple paths
 setLoader('FETCHING MODEL…', 60);
 const tryPaths = ['./school_str.ifc', '/school_str.ifc', 'school_str.ifc'];
@@ -488,6 +716,75 @@ for (const p of tryPaths) {
 
 if (!autoLoaded) {
   // Show error with manual upload fallback
+=======
+// Loads an already-converted fragments buffer directly — no IFC parsing.
+async function loadFragmentsBuffer(fragBuf, name) {
+  setLoader('LOADING CACHED MODEL…', 80);
+  loadedModelId = name + '-' + Date.now();
+  await fragments.core.load(fragBuf, { modelId: loadedModelId });
+  const mb = (fragBuf.byteLength / 1048576).toFixed(1);
+  finalizeLoad(name, mb, true);
+}
+
+async function fetchAndLoad(name) {
+  // 1. Try this browser's IndexedDB cache first — instant, no parsing.
+  const cached = await getCachedFragments(name);
+  if (cached) {
+    try {
+      await loadFragmentsBuffer(cached, name);
+      return true;
+    } catch(e) {
+      console.warn('[PrediView] cached fragments failed to load, refetching:', e);
+      await deleteCachedFragments(name);
+    }
+  }
+
+  // 2. Try a pre-converted .frag file shipped alongside the page — this is
+  //    shared by EVERY visitor, not just the ones who've loaded it before.
+  //    Generate it once via the debug hook and drop it next to this HTML
+  //    as "<name>.frag" to skip IFC parsing for everyone.
+  const fragPaths = [`./${name}.frag`, `/${name}.frag`, `${name}.frag`];
+  for (const p of fragPaths) {
+    try {
+      const resp = await fetch(p);
+      if (!resp.ok) continue;
+      const ab = await resp.arrayBuffer();
+      if (ab.byteLength < 1000) continue;
+      await loadFragmentsBuffer(ab, name);
+      await setCachedFragments(name, ab); // also warm this browser's local cache
+      return true;
+    } catch(_) { continue; }
+  }
+
+  // 3. Fall back to fetching + parsing the raw IFC (slow path).
+  const tryPaths = [`./${name}.ifc`, `/${name}.ifc`, `${name}.ifc`];
+  for (const p of tryPaths) {
+    try {
+      const resp = await fetch(p);
+      if (!resp.ok) continue;
+      const ab = await resp.arrayBuffer();
+      if (ab.byteLength < 1000) continue; // not a real IFC
+      await loadBuffer(ab, name);
+      return true;
+    } catch(_) { continue; }
+  }
+  return false;
+}
+
+// Load all federated models sequentially so they coexist in the scene.
+let anyLoaded = false;
+for (const name of MODEL_FILES) {
+  setLoader(`FETCHING ${name}…`, 60);
+  const ok = await fetchAndLoad(name);
+  if (ok) anyLoaded = true;
+}
+
+if (anyLoaded) {
+  const models = MODEL_FILES.map(n => modelState[n]?.modelId).filter(Boolean).map(id => fragments.list.get(id)).filter(Boolean);
+  if (models.length) setTimeout(() => world.camera.fit(models.map(m => m.object)), 200);
+  loader.style.display = 'none';
+} else {
+>>>>>>> 6a345bc (ahora si)
   loader.style.display = 'none';
   errOverlay.style.display = 'flex';
   setStatus('Awaiting file…', 'var(--muted)');
