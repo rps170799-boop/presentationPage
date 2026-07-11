@@ -494,9 +494,23 @@ components.init();
 setLoader('LOADING FRAGMENT ENGINE…', 20);
 let fragments;
 try {
-  const workerResp = await fetch('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
-  const workerBlob = await workerResp.blob();
-  const workerUrl  = URL.createObjectURL(new File([workerBlob], 'worker.mjs', { type: 'text/javascript' }));
+  // Cache the worker script itself in IndexedDB (via Cache API) so it
+  // isn't re-fetched from the CDN on every visit.
+  let workerUrl;
+  try {
+    const cache = await caches.open('prediview-worker-cache-v1');
+    let cachedResp = await cache.match('worker.mjs');
+    if (!cachedResp) {
+      await cache.add('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
+      cachedResp = await cache.match('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
+    }
+    const workerBlob = await cachedResp.blob();
+    workerUrl = URL.createObjectURL(new File([workerBlob], 'worker.mjs', { type: 'text/javascript' }));
+  } catch(_) {
+    const workerResp = await fetch('https://thatopen.github.io/engine_fragment/resources/worker.mjs');
+    const workerBlob = await workerResp.blob();
+    workerUrl = URL.createObjectURL(new File([workerBlob], 'worker.mjs', { type: 'text/javascript' }));
+  }
 
   fragments = components.get(OBC.FragmentsManager);
   fragments.init(workerUrl);
@@ -510,12 +524,12 @@ window.__prediviewDebug.fragments = fragments;
 world.camera.controls.addEventListener('update', () => fragments.core.update());
 world.onCameraChanged.add(cam => {
   for (const [, m] of fragments.list) m.useCamera(cam.three);
-  fragments.core.update(true);
+  fragments.core.update();
 });
 fragments.list.onItemSet.add(({ value: model }) => {
   model.useCamera(world.camera.three);
   world.scene.three.add(model.object);
-  fragments.core.update(true);
+  fragments.core.update();
 });
 fragments.core.models.materials.list.onItemSet.add(({ value: mat }) => {
   if (!('isLodMaterial' in mat && mat.isLodMaterial)) {
@@ -565,14 +579,14 @@ function toggleModelVisibility(name) {
     btn.classList.toggle('visible', state.visible);
     btn.querySelector('.eye').className = state.visible ? 'fas fa-eye eye' : 'fas fa-eye-slash eye';
   }
-  fragments.core.update(true);
+  fragments.core.update();
 }
 
 // ── FRAGMENTS CACHE (IndexedDB) ──
 // Converting IFC -> fragments is the expensive step. Once a model has been
 // parsed, we store its fragments binary in IndexedDB so future visits skip
 // IFC parsing entirely and just re-hydrate the fragments buffer.
-const CACHE_DB = 'prediview-fragments-cache-v3';
+const CACHE_DB = 'prediview-fragments-cache-v4';
 const CACHE_STORE = 'models';
 const CACHE_VERSION = 1;
 
@@ -677,7 +691,7 @@ async function fetchAndLoad(name) {
   //    shared by EVERY visitor, not just the ones who've loaded it before.
   //    Generate it once via the debug hook and drop it next to this HTML
   //    as "<name>.frag" to skip IFC parsing for everyone.
-  const fragPaths = [`./${name}.frag`, `/${name}.frag`, `${name}.frag`];
+  const fragPaths = [`./${name}.frag`];
   for (const p of fragPaths) {
     try {
       const resp = await fetch(p);
@@ -685,10 +699,13 @@ async function fetchAndLoad(name) {
       const ab = await resp.arrayBuffer();
       if (ab.byteLength < 1000) continue;
       await loadFragmentsBuffer(ab, name);
-      await setCachedFragments(name, ab); // also warm this browser's local cache
+      await setCachedFragments(name, ab); // only cached after a successful load
       return true;
-    } catch(_) { continue; }
-  }
+    } catch(e) {
+      console.warn(`[PrediView] .frag file for ${name} failed to load — it may be stale/corrupt, falling back to IFC:`, e);
+      continue;
+    }
+  } 
 
   // 3. Fall back to fetching + parsing the raw IFC (slow path).
   const tryPaths = [`./${name}.ifc`, `/${name}.ifc`, `${name}.ifc`];
@@ -839,7 +856,7 @@ async function clearSelection() {
   propsEmpty.style.display = 'flex';
   propsBody.style.display  = 'none';
   stElWrap.style.display   = 'none';
-  try { await fragments.resetHighlight(); await fragments.core.update(true); } catch(_) {}
+  try { await fragments.resetHighlight(); await fragments.core.update(); } catch(_) {}
 }
 
 // ── CLICK ──
@@ -885,7 +902,7 @@ container.addEventListener('click', async (e) => {
       { color: highlightColor, renderedFaces, opacity: 1, transparent: false },
       selectedMap
     );
-    await fragments.core.update(true);
+    await fragments.core.update();
   } catch(e) { console.warn('[PrediView] highlight error:', e); }
 
   try {
