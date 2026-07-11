@@ -659,7 +659,7 @@ async function loadBuffer(buf, name) {
   try {
     const model = fragments.list.get(loadedModelId);
     if (model?.getBuffer) {
-      const fragBuf = await model.getBuffer(true);
+      const fragBuf = await model.getBuffer(false);
       await setCachedFragments(name, fragBuf);
     }
   } catch(e) { console.warn('[PrediView] could not cache fragments:', e); }
